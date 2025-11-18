@@ -1,0 +1,96 @@
+system-setup/
+│
+├── 📄 README.md                      Main documentation
+├── 📄 QUICK-START.md                Quick reference guide
+├── 📄 POST-INSTALL-NIX.md           Nix & home-manager setup
+├── 📄 CHANGELOG.md                  Recent changes & updates
+├── 📄 APPIMAGE-INFO.md              What is AppImage? (optional)
+│
+├── 📁 configs/                       ⭐ NEW: Editable configurations
+│   ├── gnome-settings.conf          GNOME appearance settings
+│   └── keybindings.conf             Custom keyboard shortcuts
+│
+├── 📁 debian/                        Installation scripts
+│   ├── 🎯 Core System
+│   │   ├── install-nix.sh           Nix package manager
+│   │   ├── install-docker.sh        Docker + Compose
+│   │   └── install-nvidia-toolkit.sh NVIDIA Container Toolkit
+│   │
+│   ├── 🌐 Browsers & Editors
+│   │   ├── install-chrome.sh        Google Chrome
+│   │   ├── install-zen.sh           ⭐ NEW: Zen Browser
+│   │   └── install-cursor.sh        Cursor AI Editor
+│   │
+│   ├── 💻 Terminal & Tools
+│   │   ├── install-alacritty.sh     Alacritty Terminal
+│   │   └── setup-appimage.sh        AppImage support (optional)
+│   │
+│   └── ⚙️  Customization
+│       ├── install-launcher.sh      Spotlight-like launcher
+│       ├── setup-keybindings.sh     ✨ Uses config file now
+│       └── setup-appearance.sh      ✨ Uses config file now
+│
+└── 🚀 install.sh                     Main installer (interactive + CLI)
+
+────────────────────────────────────────────────────────────
+
+KEY IMPROVEMENTS:
+═══════════════
+
+✅ Separated configs from scripts
+   - configs/gnome-settings.conf
+   - configs/keybindings.conf
+   - Easy to edit, version control, and customize
+
+✅ Added Zen Browser
+   - Beautiful Firefox-based browser
+   - Privacy-focused alternative to Chrome
+
+✅ Removed AppImage from essentials
+   - Still available if needed
+   - Most users should use Nix instead
+
+✅ New helper command: apply-appearance
+   - Applies settings from ~/.config/gnome-settings.conf
+   - Easy to customize and reapply
+
+────────────────────────────────────────────────────────────
+
+USAGE:
+══════
+
+Interactive:
+  ./install.sh
+
+CLI:
+  ./install.sh nix         # Nix package manager
+  ./install.sh zen         # Zen browser
+  ./install.sh essentials  # Core tools (1-7)
+  ./install.sh all         # Everything!
+
+After install:
+  apply-appearance         # Apply GNOME settings
+  setup-launcher-hotkey    # Setup Ctrl+Space
+
+────────────────────────────────────────────────────────────
+
+RECOMMENDED WORKFLOW:
+═══════════════════
+
+1. Customize configs (optional):
+   nano configs/gnome-settings.conf
+   nano configs/keybindings.conf
+
+2. Install:
+   ./install.sh all
+
+3. Log out and back in
+
+4. Apply settings:
+   apply-appearance
+
+5. Setup Nix dotfiles:
+   See POST-INSTALL-NIX.md
+
+────────────────────────────────────────────────────────────
+

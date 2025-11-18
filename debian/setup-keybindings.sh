@@ -3,6 +3,10 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(dirname "$SCRIPT_DIR")/configs"
+KEYBINDINGS_CONFIG="$CONFIG_DIR/keybindings.conf"
+
 echo "⌨️  Setting up custom keybindings..."
 
 # Check if running on Debian-based system
@@ -27,6 +31,13 @@ elif command -v kitty &> /dev/null; then
     echo "✅ Using Kitty as terminal"
 else
     echo "⚠️  Alacritty not found, using default terminal"
+fi
+
+# Copy keybindings config to user directory
+USER_KEYBINDINGS_CONFIG="$HOME/.config/keybindings.conf"
+if [ -f "$KEYBINDINGS_CONFIG" ]; then
+    cp "$KEYBINDINGS_CONFIG" "$USER_KEYBINDINGS_CONFIG"
+    echo "📋 Copied keybindings config to: $USER_KEYBINDINGS_CONFIG"
 fi
 
 setup_gnome_keybindings() {
@@ -125,4 +136,7 @@ echo "💡 Tips:"
 echo "   - Ctrl+Alt+T should now open $TERMINAL_CMD"
 echo "   - You may need to log out and log back in for changes to take effect"
 echo "   - If it doesn't work, check your DE's keyboard settings"
+echo ""
+echo "📍 Keybindings config: $USER_KEYBINDINGS_CONFIG"
+echo "💡 Edit and customize your keybindings there, then re-run this script"
 

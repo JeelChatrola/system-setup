@@ -59,11 +59,11 @@ show_menu() {
     echo ""
     echo "🌐 Browsers & Editors:"
     echo "  4)  Google Chrome"
-    echo "  5)  Cursor (AI Code Editor)"
+    echo "  5)  Zen Browser (beautiful, privacy-focused)"
+    echo "  6)  Cursor (AI Code Editor)"
     echo ""
     echo "💻 Terminal & Tools:"
-    echo "  6)  Alacritty (Terminal Emulator)"
-    echo "  7)  AppImage Tools"
+    echo "  7)  Alacritty (Terminal Emulator)"
     echo ""
     echo "⚙️  Customization:"
     echo "  8)  Application Launcher (Ctrl+Space, like Mac Spotlight)"
@@ -99,6 +99,15 @@ install_chrome() {
     fi
 }
 
+install_zen() {
+    print_info "Installing Zen Browser..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-zen.sh"
+    else
+        print_error "Zen installation not supported for $OS yet"
+    fi
+}
+
 install_cursor() {
     print_info "Installing Cursor..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
@@ -114,15 +123,6 @@ install_alacritty() {
         bash "$SCRIPT_DIR/debian/install-alacritty.sh"
     else
         print_error "Alacritty installation not supported for $OS yet"
-    fi
-}
-
-install_appimage_tools() {
-    print_info "Setting up AppImage tools..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-appimage.sh"
-    else
-        print_error "AppImage setup not supported for $OS yet"
     fi
 }
 
@@ -176,9 +176,9 @@ install_essentials() {
     install_nix
     install_docker
     install_chrome
+    install_zen
     install_cursor
     install_alacritty
-    install_appimage_tools
 }
 
 install_all() {
@@ -186,9 +186,9 @@ install_all() {
     install_nix
     install_docker
     install_chrome
+    install_zen
     install_cursor
     install_alacritty
-    install_appimage_tools
     install_launcher
     setup_keybindings
     setup_appearance
@@ -219,14 +219,14 @@ if [ $# -gt 0 ]; then
         chrome)
             install_chrome
             ;;
+        zen)
+            install_zen
+            ;;
         cursor)
             install_cursor
             ;;
         alacritty)
             install_alacritty
-            ;;
-        appimage)
-            install_appimage_tools
             ;;
         launcher)
             install_launcher
@@ -251,9 +251,9 @@ if [ $# -gt 0 ]; then
             echo "  docker          Install Docker"
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  chrome          Install Google Chrome"
+            echo "  zen             Install Zen Browser"
             echo "  cursor          Install Cursor AI Editor"
             echo "  alacritty       Install Alacritty terminal"
-            echo "  appimage        Setup AppImage tools"
             echo "  launcher        Install application launcher (Spotlight-like)"
             echo "  keybindings     Setup custom keybindings"
             echo "  appearance      Setup themes and appearance"
@@ -280,13 +280,13 @@ else
                 install_chrome
                 ;;
             5)
-                install_cursor
+                install_zen
                 ;;
             6)
-                install_alacritty
+                install_cursor
                 ;;
             7)
-                install_appimage_tools
+                install_alacritty
                 ;;
             8)
                 install_launcher
