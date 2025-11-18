@@ -126,12 +126,72 @@ install_appimage_tools() {
     fi
 }
 
-install_all() {
+install_docker() {
+    print_info "Installing Docker..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-docker.sh"
+    else
+        print_error "Docker installation not supported for $OS yet"
+    fi
+}
+
+install_nvidia_toolkit() {
+    print_info "Installing NVIDIA Container Toolkit..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-nvidia-toolkit.sh"
+    else
+        print_error "NVIDIA Toolkit installation not supported for $OS yet"
+    fi
+}
+
+install_launcher() {
+    print_info "Installing Application Launcher..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-launcher.sh"
+    else
+        print_error "Launcher installation not supported for $OS yet"
+    fi
+}
+
+setup_keybindings() {
+    print_info "Setting up keybindings..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/setup-keybindings.sh"
+    else
+        print_error "Keybinding setup not supported for $OS yet"
+    fi
+}
+
+setup_appearance() {
+    print_info "Setting up appearance..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/setup-appearance.sh"
+    else
+        print_error "Appearance setup not supported for $OS yet"
+    fi
+}
+
+install_essentials() {
+    print_info "Installing System Essentials..."
     install_nix
+    install_docker
     install_chrome
     install_cursor
     install_alacritty
     install_appimage_tools
+}
+
+install_all() {
+    print_info "Installing Everything..."
+    install_nix
+    install_docker
+    install_chrome
+    install_cursor
+    install_alacritty
+    install_appimage_tools
+    install_launcher
+    setup_keybindings
+    setup_appearance
 }
 
 # Main execution
@@ -150,6 +210,12 @@ if [ $# -gt 0 ]; then
         nix)
             install_nix
             ;;
+        docker)
+            install_docker
+            ;;
+        nvidia|nvidia-toolkit)
+            install_nvidia_toolkit
+            ;;
         chrome)
             install_chrome
             ;;
@@ -162,11 +228,37 @@ if [ $# -gt 0 ]; then
         appimage)
             install_appimage_tools
             ;;
+        launcher)
+            install_launcher
+            ;;
+        keybindings)
+            setup_keybindings
+            ;;
+        appearance)
+            setup_appearance
+            ;;
+        essentials)
+            install_essentials
+            ;;
         all)
             install_all
             ;;
         *)
-            echo "Usage: $0 [nix|chrome|cursor|alacritty|appimage|all]"
+            echo "Usage: $0 [OPTION]"
+            echo ""
+            echo "Options:"
+            echo "  nix             Install Nix package manager"
+            echo "  docker          Install Docker"
+            echo "  nvidia          Install NVIDIA Container Toolkit"
+            echo "  chrome          Install Google Chrome"
+            echo "  cursor          Install Cursor AI Editor"
+            echo "  alacritty       Install Alacritty terminal"
+            echo "  appimage        Setup AppImage tools"
+            echo "  launcher        Install application launcher (Spotlight-like)"
+            echo "  keybindings     Setup custom keybindings"
+            echo "  appearance      Setup themes and appearance"
+            echo "  essentials      Install core system tools"
+            echo "  all             Install everything"
             exit 1
             ;;
     esac
@@ -179,21 +271,39 @@ else
                 install_nix
                 ;;
             2)
-                install_chrome
+                install_docker
                 ;;
             3)
-                install_cursor
+                install_nvidia_toolkit
                 ;;
             4)
-                install_alacritty
+                install_chrome
                 ;;
             5)
-                install_appimage_tools
+                install_cursor
                 ;;
             6)
-                install_all
+                install_alacritty
                 ;;
             7)
+                install_appimage_tools
+                ;;
+            8)
+                install_launcher
+                ;;
+            9)
+                setup_keybindings
+                ;;
+            10)
+                setup_appearance
+                ;;
+            11)
+                install_essentials
+                ;;
+            12)
+                install_all
+                ;;
+            0)
                 print_info "Exiting..."
                 exit 0
                 ;;
