@@ -1,0 +1,62 @@
+{
+  "_comment": "Chrome/Chromium Preferences Configuration",
+  "_usage": "Applied by setup-chrome-config.sh to ~/.config/google-chrome/Default/Preferences",
+  
+  "browser": {
+    "check_default_browser": false,
+    "show_home_button": true,
+    "custom_chrome_frame": false
+  },
+  
+  "bookmark_bar": {
+    "show_on_all_tabs": true
+  },
+  
+  "download": {
+    "prompt_for_download": true,
+    "directory_upgrade": true
+  },
+  
+  "profile": {
+    "default_content_setting_values": {
+      "notifications": 2,
+      "geolocation": 2
+    }
+  },
+  
+  "net": {
+    "network_prediction_options": 2
+  },
+  
+  "safebrowsing": {
+    "enabled": true,
+    "scout_reporting_enabled": false
+  },
+  
+  "search": {
+    "suggest_enabled": true
+  },
+  
+  "session": {
+    "restore_on_startup": 1,
+    "startup_urls": []
+  },
+  
+  "translate": {
+    "enabled": true
+  },
+  
+  "extensions": {
+    "ui": {
+      "developer_mode": false
+    }
+  },
+  
+  "_customization_notes": [
+    "restore_on_startup: 1 = restore last session, 5 = open new tab",
+    "notifications: 1 = allow, 2 = block",
+    "network_prediction_options: 0 = always, 1 = wifi only, 2 = never",
+    "Edit this file and re-run: ./debian/setup-chrome-config.sh"
+  ]
+}
+
