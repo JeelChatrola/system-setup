@@ -69,16 +69,18 @@ show_menu() {
     echo "  8)  Application Launcher (Ctrl+Space, like Mac Spotlight)"
     echo "  9)  Setup Keybindings (Ctrl+Alt+T for terminal)"
     echo "  10) Setup Appearance (themes, fonts, tweaks)"
+    echo "  11) Configure Chrome (flags & settings)"
+    echo "  12) Configure Zen Browser (user.js & userChrome.css)"
     echo ""
     echo "🚀 Quick Install:"
-    echo "  11) Install System Essentials (1-7)"
-    echo "  12) Install Everything (1-10)"
+    echo "  13) Install System Essentials (1-7)"
+    echo "  14) Install Everything (1-12)"
     echo ""
     echo "  0)  Exit"
     echo ""
     echo "==========================================================="
     echo ""
-    read -p "Enter your choice [0-12]: " choice
+    read -p "Enter your choice [0-14]: " choice
 }
 
 install_nix() {
@@ -171,6 +173,24 @@ setup_appearance() {
     fi
 }
 
+setup_chrome_config() {
+    print_info "Configuring Chrome..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/setup-chrome-config.sh"
+    else
+        print_error "Chrome config not supported for $OS yet"
+    fi
+}
+
+setup_zen_config() {
+    print_info "Configuring Zen Browser..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/setup-zen-config.sh"
+    else
+        print_error "Zen config not supported for $OS yet"
+    fi
+}
+
 install_essentials() {
     print_info "Installing System Essentials..."
     install_nix
@@ -192,6 +212,8 @@ install_all() {
     install_launcher
     setup_keybindings
     setup_appearance
+    setup_chrome_config
+    setup_zen_config
 }
 
 # Main execution
@@ -237,6 +259,12 @@ if [ $# -gt 0 ]; then
         appearance)
             setup_appearance
             ;;
+        chrome-config)
+            setup_chrome_config
+            ;;
+        zen-config)
+            setup_zen_config
+            ;;
         essentials)
             install_essentials
             ;;
@@ -257,6 +285,8 @@ if [ $# -gt 0 ]; then
             echo "  launcher        Install application launcher (Spotlight-like)"
             echo "  keybindings     Setup custom keybindings"
             echo "  appearance      Setup themes and appearance"
+            echo "  chrome-config   Configure Chrome browser"
+            echo "  zen-config      Configure Zen browser"
             echo "  essentials      Install core system tools"
             echo "  all             Install everything"
             exit 1
@@ -298,9 +328,15 @@ else
                 setup_appearance
                 ;;
             11)
-                install_essentials
+                setup_chrome_config
                 ;;
             12)
+                setup_zen_config
+                ;;
+            13)
+                install_essentials
+                ;;
+            14)
                 install_all
                 ;;
             0)
