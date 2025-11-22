@@ -7,41 +7,41 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(dirname "$SCRIPT_DIR")/configs"
 KEYBINDINGS_CONFIG="$CONFIG_DIR/keybindings.conf"
 
-echo "⌨️  Setting up custom keybindings..."
+echo "[*] Setting up custom keybindings..."
 
 # Check if running on Debian-based system
 if ! command -v apt &> /dev/null; then
-    echo "❌ Error: This script is for Debian-based systems only"
+    echo "[ERROR] Error: This script is for Debian-based systems only"
     exit 1
 fi
 
 # Detect desktop environment
 DE="${XDG_CURRENT_DESKTOP:-unknown}"
 
-echo "📍 Detected desktop environment: $DE"
+echo "[*] Detected desktop environment: $DE"
 echo ""
 
 # Check if Alacritty is installed
 TERMINAL_CMD="gnome-terminal"
 if command -v alacritty &> /dev/null; then
     TERMINAL_CMD="alacritty"
-    echo "✅ Using Alacritty as terminal"
+    echo "[OK] Using Alacritty as terminal"
 elif command -v kitty &> /dev/null; then
     TERMINAL_CMD="kitty"
-    echo "✅ Using Kitty as terminal"
+    echo "[OK] Using Kitty as terminal"
 else
-    echo "⚠️  Alacritty not found, using default terminal"
+    echo "[WARN]  Alacritty not found, using default terminal"
 fi
 
 # Copy keybindings config to user directory
 USER_KEYBINDINGS_CONFIG="$HOME/.config/keybindings.conf"
 if [ -f "$KEYBINDINGS_CONFIG" ]; then
     cp "$KEYBINDINGS_CONFIG" "$USER_KEYBINDINGS_CONFIG"
-    echo "📋 Copied keybindings config to: $USER_KEYBINDINGS_CONFIG"
+    echo "[*] Copied keybindings config to: $USER_KEYBINDINGS_CONFIG"
 fi
 
 setup_gnome_keybindings() {
-    echo "🔧 Setting up GNOME keybindings..."
+    echo "[*] Setting up GNOME keybindings..."
     
     # Install dconf-cli if not present
     if ! command -v dconf &> /dev/null; then
@@ -49,7 +49,7 @@ setup_gnome_keybindings() {
     fi
     
     # Create custom keybinding for Ctrl+Alt+T
-    echo "⌨️  Setting Ctrl+Alt+T to open $TERMINAL_CMD..."
+    echo "[*] Setting Ctrl+Alt+T to open $TERMINAL_CMD..."
     
     CUSTOM_KEYBINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
     
@@ -72,13 +72,13 @@ setup_gnome_keybindings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$new_path command "$TERMINAL_CMD"
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$new_path binding "<Primary><Alt>t"
     
-    echo "✅ Ctrl+Alt+T → $TERMINAL_CMD"
+    echo "[OK] Ctrl+Alt+T → $TERMINAL_CMD"
 }
 
 setup_kde_keybindings() {
-    echo "🔧 Setting up KDE keybindings..."
+    echo "[*] Setting up KDE keybindings..."
     echo ""
-    echo "📍 For KDE Plasma:"
+    echo "[*] For KDE Plasma:"
     echo "1. Open System Settings"
     echo "2. Go to Shortcuts → Custom Shortcuts"
     echo "3. Click 'Edit' → 'New' → 'Global Shortcut' → 'Command/URL'"
@@ -91,9 +91,9 @@ setup_kde_keybindings() {
 }
 
 setup_generic_keybindings() {
-    echo "🔧 Generic setup for other desktop environments..."
+    echo "[*] Generic setup for other desktop environments..."
     echo ""
-    echo "📍 To set up Ctrl+Alt+T for terminal:"
+    echo "[*] To set up Ctrl+Alt+T for terminal:"
     echo "1. Open your desktop environment's keyboard settings"
     echo "2. Add a custom shortcut:"
     echo "   - Shortcut: Ctrl+Alt+T"
@@ -108,7 +108,7 @@ $TERMINAL_CMD
 EOF
     chmod +x "$HOME/.local/bin/open-terminal"
     
-    echo "✅ Created helper script: ~/.local/bin/open-terminal"
+    echo "[OK] Created helper script: ~/.local/bin/open-terminal"
     echo "   Use this in your keyboard shortcut configuration"
 }
 
@@ -124,19 +124,19 @@ case "$DE" in
         setup_generic_keybindings
         ;;
     *)
-        echo "⚠️  Unknown desktop environment: $DE"
+        echo "[WARN]  Unknown desktop environment: $DE"
         setup_generic_keybindings
         ;;
 esac
 
 echo ""
-echo "✅ Keybinding setup complete!"
+echo "[OK] Keybinding setup complete!"
 echo ""
-echo "💡 Tips:"
+echo "[TIP] Tips:"
 echo "   - Ctrl+Alt+T should now open $TERMINAL_CMD"
 echo "   - You may need to log out and log back in for changes to take effect"
 echo "   - If it doesn't work, check your DE's keyboard settings"
 echo ""
-echo "📍 Keybindings config: $USER_KEYBINDINGS_CONFIG"
-echo "💡 Edit and customize your keybindings there, then re-run this script"
+echo "[*] Keybindings config: $USER_KEYBINDINGS_CONFIG"
+echo "[TIP] Edit and customize your keybindings there, then re-run this script"
 

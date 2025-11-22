@@ -20,19 +20,19 @@ print_header() {
 }
 
 print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}[OK] $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}[ERROR] $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}[WARN]  $1${NC}"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+    echo -e "${BLUE}[INFO]  $1${NC}"
 }
 
 detect_os() {
@@ -52,27 +52,27 @@ show_menu() {
     echo ""
     echo "==================== INSTALLATION MENU ===================="
     echo ""
-    echo "📦 Core System:"
+    echo "[*] Core System:"
     echo "  1)  Nix Package Manager (for dotfiles & user packages)"
     echo "  2)  Docker + Docker Compose"
     echo "  3)  NVIDIA Container Toolkit (requires Docker)"
     echo ""
-    echo "🌐 Browsers & Editors:"
+    echo "[*] Browsers & Editors:"
     echo "  4)  Google Chrome"
     echo "  5)  Zen Browser (beautiful, privacy-focused)"
     echo "  6)  Cursor (AI Code Editor)"
     echo ""
-    echo "💻 Terminal & Tools:"
+    echo "[*] Terminal & Tools:"
     echo "  7)  Alacritty (Terminal Emulator)"
     echo ""
-    echo "⚙️  Customization:"
+    echo "[*]  Customization:"
     echo "  8)  Application Launcher (Ctrl+Space, like Mac Spotlight)"
     echo "  9)  Setup Keybindings (Ctrl+Alt+T for terminal)"
     echo "  10) Setup Appearance (themes, fonts, tweaks)"
     echo "  11) Configure Chrome (flags & settings)"
     echo "  12) Configure Zen Browser (user.js & userChrome.css)"
     echo ""
-    echo "🚀 Quick Install:"
+    echo "[*] Quick Install:"
     echo "  13) Install System Essentials (1-7)"
     echo "  14) Install Everything (1-12)"
     echo ""
@@ -89,33 +89,6 @@ install_nix() {
         bash "$SCRIPT_DIR/debian/install-nix.sh"
     else
         print_error "Nix installation not supported for $OS yet"
-    fi
-}
-
-install_chrome() {
-    print_info "Installing Google Chrome..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-chrome.sh"
-    else
-        print_error "Chrome installation not supported for $OS yet"
-    fi
-}
-
-install_zen() {
-    print_info "Installing Zen Browser..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-zen.sh"
-    else
-        print_error "Zen installation not supported for $OS yet"
-    fi
-}
-
-install_cursor() {
-    print_info "Installing Cursor..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-cursor.sh"
-    else
-        print_error "Cursor installation not supported for $OS yet"
     fi
 }
 
@@ -165,7 +138,7 @@ setup_keybindings() {
 }
 
 setup_appearance() {
-    print_info "Setting up appearance..."
+    print_info "Setting up appearance (Themes & Fonts)..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
         bash "$SCRIPT_DIR/debian/setup-appearance.sh"
     else
@@ -173,47 +146,33 @@ setup_appearance() {
     fi
 }
 
-setup_chrome_config() {
-    print_info "Configuring Chrome..."
+install_i3() {
+    print_info "Installing i3 Window Manager..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-chrome-config.sh"
+        bash "$SCRIPT_DIR/debian/install-i3.sh"
     else
-        print_error "Chrome config not supported for $OS yet"
-    fi
-}
-
-setup_zen_config() {
-    print_info "Configuring Zen Browser..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-zen-config.sh"
-    else
-        print_error "Zen config not supported for $OS yet"
+        print_error "i3 installation not supported for $OS yet"
     fi
 }
 
 install_essentials() {
-    print_info "Installing System Essentials..."
+    print_info "Installing Essentials..."
     install_nix
     install_docker
-    install_chrome
-    install_zen
-    install_cursor
     install_alacritty
+    install_launcher
 }
 
 install_all() {
     print_info "Installing Everything..."
     install_nix
     install_docker
-    install_chrome
-    install_zen
-    install_cursor
+    install_nvidia_toolkit
     install_alacritty
     install_launcher
+    install_i3
     setup_keybindings
     setup_appearance
-    setup_chrome_config
-    setup_zen_config
 }
 
 # Main execution
@@ -238,32 +197,20 @@ if [ $# -gt 0 ]; then
         nvidia|nvidia-toolkit)
             install_nvidia_toolkit
             ;;
-        chrome)
-            install_chrome
-            ;;
-        zen)
-            install_zen
-            ;;
-        cursor)
-            install_cursor
-            ;;
         alacritty)
             install_alacritty
             ;;
         launcher)
             install_launcher
             ;;
+        i3)
+            install_i3
+            ;;
         keybindings)
             setup_keybindings
             ;;
         appearance)
             setup_appearance
-            ;;
-        chrome-config)
-            setup_chrome_config
-            ;;
-        zen-config)
-            setup_zen_config
             ;;
         essentials)
             install_essentials
@@ -278,16 +225,12 @@ if [ $# -gt 0 ]; then
             echo "  nix             Install Nix package manager"
             echo "  docker          Install Docker"
             echo "  nvidia          Install NVIDIA Container Toolkit"
-            echo "  chrome          Install Google Chrome"
-            echo "  zen             Install Zen Browser"
-            echo "  cursor          Install Cursor AI Editor"
             echo "  alacritty       Install Alacritty terminal"
-            echo "  launcher        Install application launcher (Spotlight-like)"
+            echo "  launcher        Install Rofi launcher"
+            echo "  i3              Install i3 Window Manager"
             echo "  keybindings     Setup custom keybindings"
-            echo "  appearance      Setup themes and appearance"
-            echo "  chrome-config   Configure Chrome browser"
-            echo "  zen-config      Configure Zen browser"
-            echo "  essentials      Install core system tools"
+            echo "  appearance      Install themes and fonts"
+            echo "  essentials      Install core tools"
             echo "  all             Install everything"
             exit 1
             ;;
@@ -307,36 +250,24 @@ else
                 install_nvidia_toolkit
                 ;;
             4)
-                install_chrome
-                ;;
-            5)
-                install_zen
-                ;;
-            6)
-                install_cursor
-                ;;
-            7)
                 install_alacritty
                 ;;
-            8)
+            5)
                 install_launcher
                 ;;
-            9)
+            6)
+                install_i3
+                ;;
+            7)
                 setup_keybindings
                 ;;
-            10)
+            8)
                 setup_appearance
                 ;;
-            11)
-                setup_chrome_config
-                ;;
-            12)
-                setup_zen_config
-                ;;
-            13)
+            9)
                 install_essentials
                 ;;
-            14)
+            10)
                 install_all
                 ;;
             0)
