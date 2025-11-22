@@ -18,6 +18,7 @@ sudo apt install -y i3 i3-wm i3status i3lock dmenu suckless-tools feh picom nitr
 echo "[*] Configuring i3 defaults..."
 mkdir -p "$HOME/.config/i3"
 mkdir -p "$HOME/.config/polybar"
+mkdir -p "$HOME/.config/rofi"
 mkdir -p "$HOME/Pictures"
 mkdir -p "$HOME/.local/bin"
 
@@ -39,6 +40,9 @@ chmod +x "$HOME/.local/bin/i3-help"
 cp "$CONFIG_DIR/polybar-launch.sh" "$HOME/.config/polybar/launch.sh"
 chmod +x "$HOME/.config/polybar/launch.sh"
 cp "$CONFIG_DIR/polybar-config.ini" "$HOME/.config/polybar/config.ini"
+
+# Install Rofi Config
+cp "$CONFIG_DIR/rofi-config.rasi" "$HOME/.config/rofi/config.rasi"
 
 # Install i3 Config
 # Only overwrite if it doesn't exist or force is requested (logic simplified for install script)

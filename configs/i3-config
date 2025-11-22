@@ -17,7 +17,7 @@ bindsym $mod+Shift+q kill
 bindsym $mod+d exec "rofi -show drun -show-icons"
 
 # HELP POPUP
-bindsym $mod+Shift+question exec i3-help
+bindsym $mod+Shift+question exec ~/.local/bin/i3-help
 
 # change focus
 bindsym $mod+j focus left

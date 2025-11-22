@@ -1,0 +1,68 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    font: "JetBrainsMono Nerd Font 12";
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Window";
+    drun-display-format: "{icon} {name}";
+}
+
+@theme "gruvbox-dark-hard"
+
+window {
+    width: 40%;
+    border: 2px;
+    border-color: #ebdbb2;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #282828;
+}
+
+element {
+    padding: 8px;
+    border-radius: 4px;
+}
+
+element selected {
+    background-color: #ebdbb2;
+    text-color: #282828;
+}
+
+element-text {
+    background-color: inherit;
+    text-color: inherit;
+    vertical-align: 0.5;
+}
+
+element-icon {
+    size: 24px;
+    padding: 0 10px 0 0;
+    background-color: inherit;
+}
+
+inputbar {
+    children: [prompt, entry];
+    padding: 0 0 20px 0;
+}
+
+prompt {
+    background-color: #ebdbb2;
+    text-color: #282828;
+    padding: 10px 20px;
+    border-radius: 4px;
+    margin: 0 10px 0 0;
+}
+
+entry {
+    background-color: #3c3836;
+    text-color: #ebdbb2;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+listview {
+    lines: 8;
+    columns: 1;
+}
+
