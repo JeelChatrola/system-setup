@@ -61,6 +61,7 @@ show_menu() {
     echo ""
     echo "  [*] Desktop & Tools:"
     echo "      4)  Alacritty (Terminal Emulator)"
+    echo "      4g) Ghostty (Terminal Emulator, recommended)"
     echo "      5)  Application Launcher (Rofi)"
     echo "      6)  i3 Window Manager"
     echo ""
@@ -85,6 +86,15 @@ install_nix() {
         bash "$SCRIPT_DIR/debian/install-nix.sh"
     else
         print_error "Nix installation not supported for $OS yet"
+    fi
+}
+
+install_ghostty() {
+    print_info "Installing Ghostty..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-ghostty.sh"
+    else
+        print_error "Ghostty installation not supported for $OS yet"
     fi
 }
 
@@ -155,7 +165,7 @@ install_essentials() {
     print_info "Installing Essentials..."
     install_nix
     install_docker
-    install_alacritty
+    install_ghostty || install_alacritty
     install_launcher
 }
 
@@ -164,7 +174,7 @@ install_all() {
     install_nix
     install_docker
     install_nvidia_toolkit
-    install_alacritty
+    install_ghostty || install_alacritty
     install_launcher
     install_i3
     setup_keybindings
@@ -192,6 +202,9 @@ if [ $# -gt 0 ]; then
             ;;
         nvidia|nvidia-toolkit)
             install_nvidia_toolkit
+            ;;
+        ghostty)
+            install_ghostty
             ;;
         alacritty)
             install_alacritty
@@ -221,6 +234,7 @@ if [ $# -gt 0 ]; then
             echo "  nix             Install Nix package manager"
             echo "  docker          Install Docker"
             echo "  nvidia          Install NVIDIA Container Toolkit"
+            echo "  ghostty         Install Ghostty terminal"
             echo "  alacritty       Install Alacritty terminal"
             echo "  launcher        Install Rofi launcher"
             echo "  i3              Install i3 Window Manager"
@@ -247,6 +261,9 @@ else
                 ;;
             4)
                 install_alacritty
+                ;;
+            4g|4G)
+                install_ghostty
                 ;;
             5)
                 install_launcher
