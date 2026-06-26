@@ -66,8 +66,9 @@ Edit them in **`configs/`** and re-run the installer (or copy them manually).
 1.  **Install OS:** Ubuntu Server or Desktop (Minimal).
 2.  **Run this repo:** `./install.sh` -> Install Everything.
 3.  **Reboot/Login:** Select `i3` session at login (if graphical) or just log in.
-4.  **Next Steps:**
-    *   Clone your **Nix Home Manager** repo to install your CLI tools (`git`, `zsh`, `neovim`, etc).
+4. **Next Steps:**
+    *   Run `./scripts/bootstrap-repos.sh` to clone **nix-config** and private **ai-stack**
+    *   `cd ~/nix-config && ./deploy.sh` then `./deploy.sh --ai`
     *   Install GUI apps manually or via Flatpak (Chrome, Zen, Cursor).
 
 ## ❌ What is NOT included?

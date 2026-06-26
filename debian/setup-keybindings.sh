@@ -21,9 +21,15 @@ DE="${XDG_CURRENT_DESKTOP:-unknown}"
 echo "[*] Detected desktop environment: $DE"
 echo ""
 
-# Check if Alacritty is installed
-TERMINAL_CMD="gnome-terminal"
-if command -v alacritty &> /dev/null; then
+# Check preferred terminal
+TERMINAL_CMD="$HOME/.local/bin/open-terminal"
+if [[ -x "$SCRIPT_DIR/scripts/open-terminal.sh" ]]; then
+    install -m 0755 "$SCRIPT_DIR/scripts/open-terminal.sh" "$TERMINAL_CMD"
+    echo "[OK] Using open-terminal helper (ghostty > alacritty > gnome-terminal)"
+elif command -v ghostty &> /dev/null; then
+    TERMINAL_CMD="ghostty"
+    echo "[OK] Using Ghostty as terminal"
+elif command -v alacritty &> /dev/null; then
     TERMINAL_CMD="alacritty"
     echo "[OK] Using Alacritty as terminal"
 elif command -v kitty &> /dev/null; then

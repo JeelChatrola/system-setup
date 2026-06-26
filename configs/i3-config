@@ -8,7 +8,7 @@ font pango:monospace 10
 floating_modifier $mod
 
 # start a terminal
-bindsym $mod+Return exec alacritty
+bindsym $mod+Return exec $HOME/.local/bin/open-terminal
 
 # kill focused window
 bindsym $mod+Shift+q kill
