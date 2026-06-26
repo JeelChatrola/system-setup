@@ -68,7 +68,6 @@ show_menu() {
     echo "  [*] Configuration:"
     echo "      7)  Setup Keybindings (Ctrl+Alt+T for terminal)"
     echo "      8)  Setup Appearance (themes, fonts, tweaks)"
-    echo "      b)  Bootstrap repos (nix-config + ai-stack)"
     echo ""
     echo "  [*] Quick Install:"
     echo "      9)  Install Essentials (Core + Terminal + Launcher)"
@@ -97,11 +96,6 @@ install_ghostty() {
     else
         print_error "Ghostty installation not supported for $OS yet"
     fi
-}
-
-bootstrap_repos() {
-    print_info "Cloning/updating nix-config and ai-stack..."
-    bash "$SCRIPT_DIR/scripts/bootstrap-repos.sh"
 }
 
 install_alacritty() {
@@ -185,7 +179,6 @@ install_all() {
     install_i3
     setup_keybindings
     setup_appearance
-    bootstrap_repos
 }
 
 # Main execution
@@ -212,9 +205,6 @@ if [ $# -gt 0 ]; then
             ;;
         ghostty)
             install_ghostty
-            ;;
-        bootstrap-repos|repos)
-            bootstrap_repos
             ;;
         alacritty)
             install_alacritty
@@ -246,7 +236,6 @@ if [ $# -gt 0 ]; then
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  ghostty         Install Ghostty terminal"
             echo "  alacritty       Install Alacritty terminal"
-            echo "  bootstrap-repos Clone/update nix-config and ai-stack"
             echo "  launcher        Install Rofi launcher"
             echo "  i3              Install i3 Window Manager"
             echo "  keybindings     Setup custom keybindings"
@@ -287,9 +276,6 @@ else
                 ;;
             8)
                 setup_appearance
-                ;;
-            b|B)
-                bootstrap_repos
                 ;;
             9)
                 install_essentials

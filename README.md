@@ -66,10 +66,10 @@ Edit them in **`configs/`** and re-run the installer (or copy them manually).
 1.  **Install OS:** Ubuntu Server or Desktop (Minimal).
 2.  **Run this repo:** `./install.sh` -> Install Everything.
 3.  **Reboot/Login:** Select `i3` session at login (if graphical) or just log in.
-4. **Next Steps:**
-    *   Run `./scripts/bootstrap-repos.sh` to clone **nix-config** and private **ai-stack**
-    *   `cd ~/nix-config && ./deploy.sh` then `./deploy.sh --ai`
-    *   Install GUI apps manually or via Flatpak (Chrome, Zen, Cursor).
+4. **Next Steps** (separate repos — clone yourself after git/SSH is ready):
+    *   Clone your Home Manager repo and private ai-stack repo
+    *   Deploy dotfiles from your nix-config checkout
+    *   Install GUI apps manually or via Flatpak (Chrome, Zen, Cursor)
 
 ## ❌ What is NOT included?
 *   **Browsers:** Install Chrome/Zen manually (they update too often).
