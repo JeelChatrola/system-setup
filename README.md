@@ -13,7 +13,7 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 ```
 
 **3. Choose an option:**
-*   **Option 10 (Install Everything):** Sets up Nix, Docker, Alacritty, i3, Rofi, and Appearance.
+*   **Option 10 (Install Everything):** Sets up Nix, Docker, Ghostty, i3, Rofi, and Appearance.
 *   **Option 6 (i3 Window Manager):** Installs i3 + Polybar + Wallpaper + Rofi.
 
 ---
@@ -27,7 +27,7 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 
 ### Desktop Environment (The "Clean" Setup)
 *   **Window Manager:** i3 (Tiling WM)
-*   **Terminal:** Alacritty (GPU accelerated)
+*   **Terminal:** Ghostty (GPU accelerated; apt/PPA via system-setup). Alacritty remains available as option 4.
 *   **Launcher:** Rofi (Modern App Launcher)
 *   **Bar:** Polybar (Beautiful status bar)
 *   **Wallpaper:** Nitrogen (Wallpaper manager)
@@ -74,4 +74,5 @@ Edit them in **`configs/`** and re-run the installer (or copy them manually).
 ## ❌ What is NOT included?
 *   **Browsers:** Install Chrome/Zen manually (they update too often).
 *   **Editors:** Install VSCode/Cursor manually.
-*   **User Dotfiles:** Manage your `.zshrc`, `.gitconfig` via Home Manager.
+*   **GUI apps:** Install via apt/PPA/Flatpak in system-setup — not Nix (you are not on NixOS).
+*   **User Dotfiles:** Manage your `.zshrc`, `.gitconfig` via Home Manager (Nix is for CLI/dotfiles only).
