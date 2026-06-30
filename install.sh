@@ -98,6 +98,15 @@ install_ghostty() {
     fi
 }
 
+install_nvtop() {
+    print_info "Installing nvtop (AppImage)..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-nvtop.sh"
+    else
+        print_error "nvtop installation not supported for $OS yet"
+    fi
+}
+
 install_alacritty() {
     print_info "Installing Alacritty..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
@@ -206,6 +215,9 @@ if [ $# -gt 0 ]; then
         ghostty)
             install_ghostty
             ;;
+        nvtop)
+            install_nvtop
+            ;;
         alacritty)
             install_alacritty
             ;;
@@ -235,6 +247,7 @@ if [ $# -gt 0 ]; then
             echo "  docker          Install Docker"
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  ghostty         Install Ghostty terminal"
+            echo "  nvtop           Install nvtop GPU monitor (AppImage)"
             echo "  alacritty       Install Alacritty terminal"
             echo "  launcher        Install Rofi launcher"
             echo "  i3              Install i3 Window Manager"
