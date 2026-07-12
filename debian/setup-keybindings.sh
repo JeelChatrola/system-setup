@@ -32,9 +32,66 @@ install -m 0755 "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION"
 TERMINAL_CMD="$OPEN_TERMINAL_DESTINATION"
 
 echo "[OK] Installed open-terminal helper (ghostty > alacritty > gnome-terminal)"
-echo "[*] Configure Ctrl+Alt+T in $DE to run: $TERMINAL_CMD"
+
+setup_gnome_keybinding() {
+    local custom_keybindings
+    local existing_paths
+    local path
+    local command
+    local terminal_path=""
+    local managed_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-terminal/"
+
+    if ! command -v dconf &> /dev/null; then
+        echo "[*] Installing dconf-cli..."
+        sudo apt install -y dconf-cli
+    fi
+
+    if ! command -v gsettings &> /dev/null; then
+        echo "[ERROR] gsettings is required to configure GNOME keybindings" >&2
+        exit 1
+    fi
+
+    custom_keybindings="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
+
+    if [[ "$custom_keybindings" == *"$managed_path"* ]]; then
+        terminal_path="$managed_path"
+    elif [[ "$custom_keybindings" != "@as []" && "$custom_keybindings" != "[]" ]]; then
+        existing_paths="$(printf '%s' "$custom_keybindings" | tr -d "[],'")"
+        for path in $existing_paths; do
+            command="$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$path" command)"
+            command="${command#\'}"
+            command="${command%\'}"
+            if [[ "$command" == "$TERMINAL_CMD" ]]; then
+                terminal_path="$path"
+                break
+            fi
+        done
+    fi
+
+    if [[ -z "$terminal_path" ]]; then
+        terminal_path="$managed_path"
+        if [[ "$custom_keybindings" == "@as []" || "$custom_keybindings" == "[]" ]]; then
+            gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['$terminal_path']"
+        else
+            gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "${custom_keybindings%]}, '$terminal_path']"
+        fi
+    fi
+
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" name "Terminal"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" command "$TERMINAL_CMD"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" binding "<Primary><Alt>t"
+    echo "[OK] Configured GNOME Ctrl+Alt+T → $TERMINAL_CMD"
+}
+
+if [[ "${DE,,}" == *"gnome"* ]]; then
+    setup_gnome_keybinding
+else
+    echo "[*] Configure Ctrl+Alt+T in $DE to run: $TERMINAL_CMD"
+fi
 
 echo ""
 echo "[OK] Keybinding setup complete!"
 echo ""
-echo "[TIP] Add Ctrl+Alt+T through your desktop environment's keyboard settings."
+if [[ "${DE,,}" != *"gnome"* ]]; then
+    echo "[TIP] Add Ctrl+Alt+T through your desktop environment's keyboard settings."
+fi
