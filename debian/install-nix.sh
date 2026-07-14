@@ -6,23 +6,6 @@ set -euo pipefail
 
 INSTALLER_VERSION="3.21.5"
 ARCH="$(uname -m)"
-
-case "$ARCH" in
-    x86_64|amd64)
-        INSTALLER_ARCH="x86_64"
-        INSTALLER_SHA256="ee9c560d6f093baf7a8b342d8a00e9f8b47dd4a6367f3f523482ee96897c4179"
-        ;;
-    aarch64|arm64)
-        INSTALLER_ARCH="aarch64"
-        INSTALLER_SHA256="9f56a034a7b0fe1bb83117a0326e1b38cc30dc14cdc311abb0637db332e1826f"
-        ;;
-    *)
-        echo "[ERROR] Unsupported architecture: $ARCH" >&2
-        exit 1
-        ;;
-esac
-
-INSTALLER_URL="https://github.com/DeterminateSystems/nix-installer/releases/download/v${INSTALLER_VERSION}/nix-installer-${INSTALLER_ARCH}-linux"
 TEMP_DIR=""
 
 cleanup() {
@@ -41,6 +24,23 @@ if command -v nix &> /dev/null; then
     echo "Nix config: $HOME/.config/nix"
     exit 0
 fi
+
+case "$ARCH" in
+    x86_64|amd64)
+        INSTALLER_ARCH="x86_64"
+        INSTALLER_SHA256="ee9c560d6f093baf7a8b342d8a00e9f8b47dd4a6367f3f523482ee96897c4179"
+        ;;
+    aarch64|arm64)
+        INSTALLER_ARCH="aarch64"
+        INSTALLER_SHA256="9f56a034a7b0fe1bb83117a0326e1b38cc30dc14cdc311abb0637db332e1826f"
+        ;;
+    *)
+        echo "[ERROR] Unsupported architecture: $ARCH" >&2
+        exit 1
+        ;;
+esac
+
+INSTALLER_URL="https://github.com/DeterminateSystems/nix-installer/releases/download/v${INSTALLER_VERSION}/nix-installer-${INSTALLER_ARCH}-linux"
 
 # Check if running on Debian-based system
 if ! command -v apt &> /dev/null; then

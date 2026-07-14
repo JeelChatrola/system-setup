@@ -48,10 +48,10 @@ if [[ ! -f "${APPIMAGE}" ]]; then
   curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
     --output "${PARTIAL_APPIMAGE}" "${URL}"
   verify_appimage "${PARTIAL_APPIMAGE}"
-  chmod 0755 "${PARTIAL_APPIMAGE}"
   mv "${PARTIAL_APPIMAGE}" "${APPIMAGE}"
 fi
 
+chmod 0755 "${APPIMAGE}"
 ln -sf "${APPIMAGE}" "${LINK}"
 
 if ! command -v nvtop &>/dev/null; then

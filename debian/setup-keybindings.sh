@@ -31,7 +31,7 @@ mkdir -p "$(dirname "$OPEN_TERMINAL_DESTINATION")"
 install -m 0755 "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION"
 TERMINAL_CMD="$OPEN_TERMINAL_DESTINATION"
 
-echo "[OK] Installed open-terminal helper (ghostty > alacritty > gnome-terminal)"
+echo "[OK] Installed open-terminal helper (ghostty > alacritty > kitty > gnome-terminal)"
 
 setup_gnome_keybinding() {
     local custom_keybindings
@@ -83,7 +83,16 @@ setup_gnome_keybinding() {
     echo "[OK] Configured GNOME Ctrl+Alt+T → $TERMINAL_CMD"
 }
 
-if [[ "${DE,,}" == *"gnome"* ]]; then
+USE_GNOME_KEYBINDINGS=false
+if [[ "${DE,,}" == *"gnome"* ]] || {
+    [[ "${DE,,}" == *"unity"* ]] \
+        && command -v gsettings &> /dev/null \
+        && gsettings list-schemas | grep -Fxq org.gnome.settings-daemon.plugins.media-keys
+}; then
+    USE_GNOME_KEYBINDINGS=true
+fi
+
+if $USE_GNOME_KEYBINDINGS; then
     setup_gnome_keybinding
 else
     echo "[*] Configure Ctrl+Alt+T in $DE to run: $TERMINAL_CMD"
@@ -92,6 +101,6 @@ fi
 echo ""
 echo "[OK] Keybinding setup complete!"
 echo ""
-if [[ "${DE,,}" != *"gnome"* ]]; then
+if ! $USE_GNOME_KEYBINDINGS; then
     echo "[TIP] Add Ctrl+Alt+T through your desktop environment's keyboard settings."
 fi
