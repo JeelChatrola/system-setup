@@ -31,7 +31,7 @@ mkdir -p "$(dirname "$OPEN_TERMINAL_DESTINATION")"
 install -m 0755 "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION"
 TERMINAL_CMD="$OPEN_TERMINAL_DESTINATION"
 
-echo "[OK] Installed open-terminal helper (ghostty > alacritty > kitty > gnome-terminal)"
+echo "[OK] Installed open-terminal helper (ghostty > gnome-terminal)"
 
 setup_gnome_keybinding() {
     local custom_keybindings

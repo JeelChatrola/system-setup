@@ -60,8 +60,7 @@ show_menu() {
     echo "      3)  NVIDIA Container Toolkit (requires Docker)"
     echo ""
     echo "  [*] Desktop & Tools:"
-    echo "      4)  Alacritty (Terminal Emulator)"
-    echo "      4g) Ghostty (Terminal Emulator, recommended)"
+    echo "      4)  Ghostty (Terminal Emulator)"
     echo "      5)  Application Launcher (Rofi)"
     echo "      6)  i3 Window Manager"
     echo ""
@@ -104,15 +103,6 @@ install_nvtop() {
         bash "$SCRIPT_DIR/debian/install-nvtop.sh"
     else
         print_error "nvtop installation not supported for $OS yet"
-    fi
-}
-
-install_alacritty() {
-    print_info "Installing Alacritty..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-alacritty.sh"
-    else
-        print_error "Alacritty installation not supported for $OS yet"
     fi
 }
 
@@ -174,7 +164,7 @@ install_essentials() {
     print_info "Installing Essentials..."
     install_nix
     install_docker
-    install_ghostty || install_alacritty
+    install_ghostty
     install_launcher
 }
 
@@ -183,7 +173,7 @@ install_all() {
     install_nix
     install_docker
     install_nvidia_toolkit
-    install_ghostty || install_alacritty
+    install_ghostty
     install_launcher
     install_i3
     setup_keybindings
@@ -218,9 +208,6 @@ if [ $# -gt 0 ]; then
         nvtop)
             install_nvtop
             ;;
-        alacritty)
-            install_alacritty
-            ;;
         launcher)
             install_launcher
             ;;
@@ -248,7 +235,6 @@ if [ $# -gt 0 ]; then
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  ghostty         Install Ghostty terminal"
             echo "  nvtop           Install nvtop GPU monitor (AppImage)"
-            echo "  alacritty       Install Alacritty terminal"
             echo "  launcher        Install Rofi launcher"
             echo "  i3              Install i3 Window Manager"
             echo "  keybindings     Setup custom keybindings"
@@ -273,9 +259,6 @@ else
                 install_nvidia_toolkit
                 ;;
             4)
-                install_alacritty
-                ;;
-            4g|4G)
                 install_ghostty
                 ;;
             5)
@@ -309,4 +292,3 @@ else
         read -p "Press Enter to continue..."
     done
 fi
-

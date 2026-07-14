@@ -27,7 +27,7 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 
 ### Desktop Environment (The "Clean" Setup)
 *   **Window Manager:** i3 (Tiling WM)
-*   **Terminal:** Ghostty (GPU accelerated; apt/PPA via system-setup). Alacritty remains available as option 4.
+*   **Terminal:** Ghostty (GPU accelerated; apt/PPA via system-setup).
 *   **Launcher:** Rofi (Modern App Launcher)
 *   **Bar:** Polybar (Beautiful status bar)
 *   **Wallpaper:** Nitrogen (Wallpaper manager)
