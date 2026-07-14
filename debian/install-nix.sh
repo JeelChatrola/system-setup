@@ -2,7 +2,16 @@
 # Install Nix package manager using Determinate Systems installer
 # See: https://github.com/DeterminateSystems/nix-installer
 
-set -e
+set -euo pipefail
+
+INSTALLER_VERSION="3.21.5"
+ARCH="$(uname -m)"
+TEMP_DIR=""
+
+cleanup() {
+    [[ -n "$TEMP_DIR" ]] && rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
 
 echo "[*] Installing Nix Package Manager..."
 
@@ -16,6 +25,23 @@ if command -v nix &> /dev/null; then
     exit 0
 fi
 
+case "$ARCH" in
+    x86_64|amd64)
+        INSTALLER_ARCH="x86_64"
+        INSTALLER_SHA256="ee9c560d6f093baf7a8b342d8a00e9f8b47dd4a6367f3f523482ee96897c4179"
+        ;;
+    aarch64|arm64)
+        INSTALLER_ARCH="aarch64"
+        INSTALLER_SHA256="9f56a034a7b0fe1bb83117a0326e1b38cc30dc14cdc311abb0637db332e1826f"
+        ;;
+    *)
+        echo "[ERROR] Unsupported architecture: $ARCH" >&2
+        exit 1
+        ;;
+esac
+
+INSTALLER_URL="https://github.com/DeterminateSystems/nix-installer/releases/download/v${INSTALLER_VERSION}/nix-installer-${INSTALLER_ARCH}-linux"
+
 # Check if running on Debian-based system
 if ! command -v apt &> /dev/null; then
     echo "[ERROR] This script is for Debian-based systems only"
@@ -25,7 +51,7 @@ fi
 # Install dependencies
 echo "[*] Installing dependencies..."
 sudo apt update
-sudo apt install -y curl xz-utils
+sudo apt install -y ca-certificates curl xz-utils
 
 # Information about Determinate Systems installer
 echo ""
@@ -48,28 +74,21 @@ if [[ ! $confirm =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-# Install Nix using Determinate Systems installer
-echo "[*] Downloading and installing Nix..."
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+# Download, verify, and run the pinned Determinate Systems installer.
+echo "[*] Downloading Determinate Systems Nix Installer v${INSTALLER_VERSION}..."
+TEMP_DIR="$(mktemp -d)"
+INSTALLER_PATH="$TEMP_DIR/nix-installer"
+curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+    --output "$INSTALLER_PATH" "$INSTALLER_URL"
+echo "$INSTALLER_SHA256  $INSTALLER_PATH" | sha256sum --check --status
+chmod 0755 "$INSTALLER_PATH"
+"$INSTALLER_PATH" install --no-confirm
 
 # Source Nix for current session
 if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
     . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 elif [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
     . "$HOME/.nix-profile/etc/profile.d/nix.sh"
-fi
-
-# Verify flakes are enabled (Determinate installer enables by default)
-echo ""
-echo "[*] Verifying Nix configuration..."
-
-mkdir -p "$HOME/.config/nix"
-
-if [ ! -f "$HOME/.config/nix/nix.conf" ] || ! grep -q "experimental-features" "$HOME/.config/nix/nix.conf"; then
-    echo "experimental-features = nix-command flakes" >> "$HOME/.config/nix/nix.conf"
-    echo "[OK] Enabled experimental features"
-else
-    echo "[OK] Experimental features already enabled"
 fi
 
 # Configure Nix channels

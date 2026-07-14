@@ -1,11 +1,12 @@
 #!/bin/bash
 # Setup custom keybindings for Debian-based systems
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$(dirname "$SCRIPT_DIR")/configs"
-KEYBINDINGS_CONFIG="$CONFIG_DIR/keybindings.conf"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+OPEN_TERMINAL_SOURCE="$REPO_ROOT/scripts/open-terminal.sh"
+OPEN_TERMINAL_DESTINATION="$HOME/.local/bin/open-terminal"
 
 echo "[*] Setting up custom keybindings..."
 
@@ -21,128 +22,85 @@ DE="${XDG_CURRENT_DESKTOP:-unknown}"
 echo "[*] Detected desktop environment: $DE"
 echo ""
 
-# Check preferred terminal
-TERMINAL_CMD="$HOME/.local/bin/open-terminal"
-if [[ -x "$SCRIPT_DIR/scripts/open-terminal.sh" ]]; then
-    install -m 0755 "$SCRIPT_DIR/scripts/open-terminal.sh" "$TERMINAL_CMD"
-    echo "[OK] Using open-terminal helper (ghostty > alacritty > gnome-terminal)"
-elif command -v ghostty &> /dev/null; then
-    TERMINAL_CMD="ghostty"
-    echo "[OK] Using Ghostty as terminal"
-elif command -v alacritty &> /dev/null; then
-    TERMINAL_CMD="alacritty"
-    echo "[OK] Using Alacritty as terminal"
-elif command -v kitty &> /dev/null; then
-    TERMINAL_CMD="kitty"
-    echo "[OK] Using Kitty as terminal"
-else
-    echo "[WARN]  Alacritty not found, using default terminal"
+if [[ ! -f "$OPEN_TERMINAL_SOURCE" ]]; then
+    echo "[ERROR] Missing terminal helper: $OPEN_TERMINAL_SOURCE" >&2
+    exit 1
 fi
 
-# Copy keybindings config to user directory
-USER_KEYBINDINGS_CONFIG="$HOME/.config/keybindings.conf"
-if [ -f "$KEYBINDINGS_CONFIG" ]; then
-    cp "$KEYBINDINGS_CONFIG" "$USER_KEYBINDINGS_CONFIG"
-    echo "[*] Copied keybindings config to: $USER_KEYBINDINGS_CONFIG"
-fi
+mkdir -p "$(dirname "$OPEN_TERMINAL_DESTINATION")"
+install -m 0755 "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION"
+TERMINAL_CMD="$OPEN_TERMINAL_DESTINATION"
 
-setup_gnome_keybindings() {
-    echo "[*] Setting up GNOME keybindings..."
-    
-    # Install dconf-cli if not present
+echo "[OK] Installed open-terminal helper (ghostty > gnome-terminal)"
+
+setup_gnome_keybinding() {
+    local custom_keybindings
+    local existing_paths
+    local path
+    local command
+    local terminal_path=""
+    local managed_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-terminal/"
+
     if ! command -v dconf &> /dev/null; then
+        echo "[*] Installing dconf-cli..."
         sudo apt install -y dconf-cli
     fi
-    
-    # Create custom keybinding for Ctrl+Alt+T
-    echo "[*] Setting Ctrl+Alt+T to open $TERMINAL_CMD..."
-    
-    CUSTOM_KEYBINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
-    
-    # Get existing custom keybindings
-    existing=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
-    
-    # Add new keybinding path
-    new_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
-    
-    if [[ $existing == "@as []" ]]; then
-        gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['$new_path']"
-    elif [[ $existing != *"custom0"* ]]; then
-        # Remove the trailing ] and add new path
-        modified="${existing%]}, '$new_path']"
-        gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$modified"
+
+    if ! command -v gsettings &> /dev/null; then
+        echo "[ERROR] gsettings is required to configure GNOME keybindings" >&2
+        exit 1
     fi
-    
-    # Set the keybinding properties
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$new_path name "Terminal"
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$new_path command "$TERMINAL_CMD"
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$new_path binding "<Primary><Alt>t"
-    
-    echo "[OK] Ctrl+Alt+T → $TERMINAL_CMD"
+
+    custom_keybindings="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
+
+    if [[ "$custom_keybindings" == *"$managed_path"* ]]; then
+        terminal_path="$managed_path"
+    elif [[ "$custom_keybindings" != "@as []" && "$custom_keybindings" != "[]" ]]; then
+        existing_paths="$(printf '%s' "$custom_keybindings" | tr -d "[],'")"
+        for path in $existing_paths; do
+            command="$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$path" command)"
+            command="${command#\'}"
+            command="${command%\'}"
+            if [[ "$command" == "$TERMINAL_CMD" ]]; then
+                terminal_path="$path"
+                break
+            fi
+        done
+    fi
+
+    if [[ -z "$terminal_path" ]]; then
+        terminal_path="$managed_path"
+        if [[ "$custom_keybindings" == "@as []" || "$custom_keybindings" == "[]" ]]; then
+            gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['$terminal_path']"
+        else
+            gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "${custom_keybindings%]}, '$terminal_path']"
+        fi
+    fi
+
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" name "Terminal"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" command "$TERMINAL_CMD"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" binding "<Primary><Alt>t"
+    echo "[OK] Configured GNOME Ctrl+Alt+T → $TERMINAL_CMD"
 }
 
-setup_kde_keybindings() {
-    echo "[*] Setting up KDE keybindings..."
-    echo ""
-    echo "[*] For KDE Plasma:"
-    echo "1. Open System Settings"
-    echo "2. Go to Shortcuts → Custom Shortcuts"
-    echo "3. Click 'Edit' → 'New' → 'Global Shortcut' → 'Command/URL'"
-    echo "4. Set:"
-    echo "   - Name: Terminal"
-    echo "   - Trigger: Ctrl+Alt+T"
-    echo "   - Action: $TERMINAL_CMD"
-    echo ""
-    read -p "Press Enter after setting up KDE shortcuts..."
-}
+USE_GNOME_KEYBINDINGS=false
+if [[ "${DE,,}" == *"gnome"* ]] || {
+    [[ "${DE,,}" == *"unity"* ]] \
+        && command -v gsettings &> /dev/null \
+        && gsettings list-schemas | grep -Fxq org.gnome.settings-daemon.plugins.media-keys
+}; then
+    USE_GNOME_KEYBINDINGS=true
+fi
 
-setup_generic_keybindings() {
-    echo "[*] Generic setup for other desktop environments..."
-    echo ""
-    echo "[*] To set up Ctrl+Alt+T for terminal:"
-    echo "1. Open your desktop environment's keyboard settings"
-    echo "2. Add a custom shortcut:"
-    echo "   - Shortcut: Ctrl+Alt+T"
-    echo "   - Command: $TERMINAL_CMD"
-    echo ""
-    
-    # Create a simple script as fallback
-    mkdir -p "$HOME/.local/bin"
-    cat > "$HOME/.local/bin/open-terminal" << EOF
-#!/bin/bash
-$TERMINAL_CMD
-EOF
-    chmod +x "$HOME/.local/bin/open-terminal"
-    
-    echo "[OK] Created helper script: ~/.local/bin/open-terminal"
-    echo "   Use this in your keyboard shortcut configuration"
-}
-
-# Setup based on desktop environment
-case "$DE" in
-    *"GNOME"*|*"ubuntu:GNOME"*|*"Unity"*)
-        setup_gnome_keybindings
-        ;;
-    *"KDE"*|*"Plasma"*)
-        setup_kde_keybindings
-        ;;
-    *"XFCE"*|*"LXDE"*|*"LXQt"*|*"MATE"*|*"Cinnamon"*)
-        setup_generic_keybindings
-        ;;
-    *)
-        echo "[WARN]  Unknown desktop environment: $DE"
-        setup_generic_keybindings
-        ;;
-esac
+if $USE_GNOME_KEYBINDINGS; then
+    setup_gnome_keybinding
+else
+    echo "[*] Configure Ctrl+Alt+T in $DE to run: $TERMINAL_CMD"
+fi
 
 echo ""
 echo "[OK] Keybinding setup complete!"
 echo ""
-echo "[TIP] Tips:"
-echo "   - Ctrl+Alt+T should now open $TERMINAL_CMD"
-echo "   - You may need to log out and log back in for changes to take effect"
-echo "   - If it doesn't work, check your DE's keyboard settings"
-echo ""
-echo "[*] Keybindings config: $USER_KEYBINDINGS_CONFIG"
-echo "[TIP] Edit and customize your keybindings there, then re-run this script"
-
+if ! $USE_GNOME_KEYBINDINGS; then
+    echo "[TIP] Add Ctrl+Alt+T through your desktop environment's keyboard settings."
+fi

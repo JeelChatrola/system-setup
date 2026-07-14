@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install i3 Window Manager on Debian-based systems
 
-set -e
+set -euo pipefail
 
 echo "[*] Installing i3 Window Manager..."
 
@@ -13,7 +13,7 @@ fi
 
 echo "[*] Installing i3 and utilities..."
 sudo apt update
-sudo apt install -y i3 i3-wm i3status i3lock dmenu suckless-tools feh picom nitrogen rofi polybar zenity fonts-font-awesome
+sudo apt install -y i3 i3-wm i3status i3lock dmenu suckless-tools feh picom nitrogen rofi polybar zenity fonts-font-awesome wget
 
 echo "[*] Configuring i3 defaults..."
 mkdir -p "$HOME/.config/i3"
@@ -24,7 +24,18 @@ mkdir -p "$HOME/.local/bin"
 
 # Get Config Directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$(dirname "$SCRIPT_DIR")/configs"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIG_DIR="$REPO_ROOT/configs"
+OPEN_TERMINAL_SOURCE="$REPO_ROOT/scripts/open-terminal.sh"
+OPEN_TERMINAL_DESTINATION="$HOME/.local/bin/open-terminal"
+
+if [[ ! -f "$OPEN_TERMINAL_SOURCE" ]]; then
+    echo "[ERROR] Missing terminal helper: $OPEN_TERMINAL_SOURCE" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$OPEN_TERMINAL_DESTINATION")"
+install -m 0755 "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION"
 
 # Download a nice default wallpaper
 if [ ! -f "$HOME/Pictures/bg.jpg" ]; then

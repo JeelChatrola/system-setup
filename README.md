@@ -14,7 +14,7 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 
 **3. Choose an option:**
 *   **Option 10 (Install Everything):** Sets up Nix, Docker, Ghostty, i3, Rofi, and Appearance.
-*   **Option 6 (i3 Window Manager):** Installs i3 + Polybar + Wallpaper + Rofi.
+*   **Option 6 (i3 Window Manager):** Installs i3 and its window-manager utilities. Configure Rofi and Polybar with their separate files below.
 
 ---
 
@@ -27,11 +27,11 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 
 ### Desktop Environment (The "Clean" Setup)
 *   **Window Manager:** i3 (Tiling WM)
-*   **Terminal:** Ghostty (GPU accelerated; apt/PPA via system-setup). Alacritty remains available as option 4.
+*   **Terminal:** Ghostty (GPU accelerated; apt/PPA via system-setup).
 *   **Launcher:** Rofi (Modern App Launcher)
 *   **Bar:** Polybar (Beautiful status bar)
 *   **Wallpaper:** Nitrogen (Wallpaper manager)
-*   **Appearance:** Gruvbox Dark Theme + Nerd Fonts (JetBrainsMono)
+*   **Appearance:** Installs the Gruvbox GTK theme, Papirus icons, and JetBrainsMono Nerd Font files. Select them in your desktop environment after installation.
 
 ---
 
@@ -56,8 +56,9 @@ Don't edit files in `/etc` or `~/.config` directly if you want to save them.
 Edit them in **`configs/`** and re-run the installer (or copy them manually).
 
 *   **i3:** `configs/i3-config`
-*   **Polybar:** `configs/polybar-config.ini`
-*   **Launcher:** `configs/polybar-launch.sh`
+*   **Rofi:** `configs/rofi-config.rasi`
+*   **Polybar configuration:** `configs/polybar-config.ini`
+*   **Polybar start script:** `configs/polybar-launch.sh`
 
 ---
 
