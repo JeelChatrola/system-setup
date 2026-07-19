@@ -58,6 +58,7 @@ show_menu() {
     echo "      1)  Nix Package Manager (for dotfiles & user packages)"
     echo "      2)  Docker + Docker Compose"
     echo "      3)  NVIDIA Container Toolkit (requires Docker)"
+    echo "      11) Tailscale (host service and exit-node prerequisites)"
     echo ""
     echo "  [*] Desktop & Tools:"
     echo "      4)  Alacritty (Terminal Emulator)"
@@ -77,7 +78,7 @@ show_menu() {
     echo ""
     echo "╚══════════════════════════════════════════════════════════╝"
     echo ""
-    read -p "Enter your choice [0-10]: " choice
+    read -p "Enter your choice [0-11]: " choice
 }
 
 install_nix() {
@@ -122,6 +123,15 @@ install_docker() {
         bash "$SCRIPT_DIR/debian/install-docker.sh"
     else
         print_error "Docker installation not supported for $OS yet"
+    fi
+}
+
+install_tailscale() {
+    print_info "Installing Tailscale..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-tailscale.sh"
+    else
+        print_error "Tailscale installation not supported for $OS yet"
     fi
 }
 
@@ -209,6 +219,9 @@ if [ $# -gt 0 ]; then
         docker)
             install_docker
             ;;
+        tailscale)
+            install_tailscale
+            ;;
         nvidia|nvidia-toolkit)
             install_nvidia_toolkit
             ;;
@@ -245,6 +258,7 @@ if [ $# -gt 0 ]; then
             echo "Options:"
             echo "  nix             Install Nix package manager"
             echo "  docker          Install Docker"
+            echo "  tailscale       Install Tailscale and exit-node prerequisites"
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  ghostty         Install Ghostty terminal"
             echo "  nvtop           Install nvtop GPU monitor (AppImage)"
@@ -271,6 +285,9 @@ else
                 ;;
             3)
                 install_nvidia_toolkit
+                ;;
+            11)
+                install_tailscale
                 ;;
             4)
                 install_alacritty
@@ -309,4 +326,3 @@ else
         read -p "Press Enter to continue..."
     done
 fi
-
