@@ -24,6 +24,7 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 *   **Nix Package Manager:** (Determinate Systems) For your CLI tools & dev env.
 *   **Docker:** Official Docker Engine + Compose.
 *   **NVIDIA Toolkit:** GPU support for Docker containers.
+*   **Tailscale:** System VPN service, available with `./install.sh tailscale`.
 
 ### Desktop Environment (The "Clean" Setup)
 *   **Window Manager:** i3 (Tiling WM)
@@ -77,3 +78,16 @@ Edit them in **`configs/`** and re-run the installer (or copy them manually).
 *   **Editors:** Install VSCode/Cursor manually.
 *   **GUI apps:** Install via apt/PPA/Flatpak in system-setup — not Nix (you are not on NixOS).
 *   **User Dotfiles:** Manage your `.zshrc`, `.gitconfig` via Home Manager (Nix is for CLI/dotfiles only).
+
+## Tailscale Exit Node
+
+Run `./install.sh tailscale` to install the matching `tailscale` client and `tailscaled` service from Tailscale's signed APT repository. The installer enables IP forwarding, but does not authenticate the host, advertise routes, or change firewall rules.
+
+After installation, authenticate and advertise the exit node manually:
+
+```bash
+sudo tailscale up
+sudo tailscale set --advertise-exit-node
+```
+
+Approve the advertised exit node in the [Tailscale admin console](https://login.tailscale.com/admin/machines). Keep the host firewall's forwarding policy restrictive; Tailscale manages only its own traffic.
