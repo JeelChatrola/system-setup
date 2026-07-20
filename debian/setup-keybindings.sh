@@ -40,6 +40,7 @@ setup_gnome_keybinding() {
     local command
     local terminal_path=""
     local managed_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-terminal/"
+    local shortcut_help_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/shortcut-help/"
 
     if ! command -v dconf &> /dev/null; then
         echo "[*] Installing dconf-cli..."
@@ -81,6 +82,20 @@ setup_gnome_keybinding() {
     gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" command "$TERMINAL_CMD"
     gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$terminal_path" binding "<Primary><Alt>t"
     echo "[OK] Configured GNOME Ctrl+Alt+T → $TERMINAL_CMD"
+
+    custom_keybindings="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
+    if [[ "$custom_keybindings" != *"$shortcut_help_path"* ]]; then
+        if [[ "$custom_keybindings" == "@as []" || "$custom_keybindings" == "[]" ]]; then
+            gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['$shortcut_help_path']"
+        else
+            gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "${custom_keybindings%]}, '$shortcut_help_path']"
+        fi
+    fi
+
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$shortcut_help_path" name "Shortcut Help"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$shortcut_help_path" command "shortcut-help --gui"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$shortcut_help_path" binding "<Super>slash"
+    echo "[OK] Configured GNOME Super+/ → shortcut-help"
 }
 
 USE_GNOME_KEYBINDINGS=false
@@ -96,11 +111,12 @@ if $USE_GNOME_KEYBINDINGS; then
     setup_gnome_keybinding
 else
     echo "[*] Configure Ctrl+Alt+T in $DE to run: $TERMINAL_CMD"
+    echo "[*] Configure Super+/ in $DE to run: shortcut-help --gui"
 fi
 
 echo ""
 echo "[OK] Keybinding setup complete!"
 echo ""
 if ! $USE_GNOME_KEYBINDINGS; then
-    echo "[TIP] Add Ctrl+Alt+T through your desktop environment's keyboard settings."
+    echo "[TIP] Add Ctrl+Alt+T and Super+/ through your desktop environment's keyboard settings."
 fi
