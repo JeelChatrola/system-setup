@@ -1,331 +1,135 @@
-#!/bin/bash
-# Main installation script for system-setup
+#!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/profiles.sh
+source "$SCRIPT_DIR/lib/profiles.sh"
+# shellcheck source=lib/platform.sh
+source "$SCRIPT_DIR/lib/platform.sh"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-print_header() {
-    echo -e "${BLUE}================================${NC}"
-    echo -e "${BLUE}  System Setup - Installation${NC}"
-    echo -e "${BLUE}================================${NC}"
-    echo ""
+usage() {
+    cat <<'EOF'
+Usage:
+  ./install.sh --profile PROFILE [--add COMPONENT]... [--remove COMPONENT]... [--plan] [--yes] [--add-docker-group]
+  ./install.sh --component COMPONENT [--plan] [--yes] [--add-docker-group]
+EOF
 }
 
-print_success() {
-    echo -e "${GREEN}[OK] $1${NC}"
-}
+die() { printf '[ERROR] %s\n' "$1" >&2; exit 1; }
 
-print_error() {
-    echo -e "${RED}[ERROR] $1${NC}"
-}
+profile=""
+single_component=""
+plan=false
+assume_yes=false
+add_docker_group=false
+adds=()
+removes=()
 
-print_warning() {
-    echo -e "${YELLOW}[WARN]  $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}[INFO]  $1${NC}"
-}
-
-detect_os() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        OS=$ID
-        VER=$VERSION_ID
-    else
-        print_error "Cannot detect OS"
-        exit 1
-    fi
-    
-    print_info "Detected OS: $OS $VER"
-}
-
-show_menu() {
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════╗"
-    echo "║                  INSTALLATION MENU                       ║"
-    echo "╠══════════════════════════════════════════════════════════╣"
-    echo ""
-    echo "  [*] Core System:"
-    echo "      1)  Nix Package Manager (for dotfiles & user packages)"
-    echo "      2)  Docker + Docker Compose"
-    echo "      3)  NVIDIA Container Toolkit (requires Docker)"
-    echo "      11) Tailscale (host service and exit-node prerequisites)"
-    echo ""
-    echo "  [*] Desktop & Tools:"
-    echo "      4)  Ghostty (Terminal Emulator)"
-    echo "      5)  Application Launcher (Rofi)"
-    echo "      6)  i3 Window Manager"
-    echo "      12) Flatpak + managed GUI apps (Flathub, system scope)"
-    echo ""
-    echo "  [*] Configuration:"
-    echo "      7)  Setup Keybindings (Ctrl+Alt+T for terminal)"
-    echo "      8)  Setup Appearance (themes, fonts, tweaks)"
-    echo ""
-    echo "  [*] Quick Install:"
-    echo "      9)  Install Essentials (Core + Terminal + Launcher)"
-    echo "     10)  Install Everything"
-    echo ""
-    echo "     0)   Exit"
-    echo ""
-    echo "╚══════════════════════════════════════════════════════════╝"
-    echo ""
-    read -p "Enter your choice [0-12]: " choice
-}
-
-install_nix() {
-    print_info "Installing Nix Package Manager..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-nix.sh" "$@"
-    else
-        print_error "Nix installation not supported for $OS yet"
-    fi
-}
-
-install_ghostty() {
-    print_info "Installing Ghostty..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-ghostty.sh" "$@"
-    else
-        print_error "Ghostty installation not supported for $OS yet"
-    fi
-}
-
-install_nvtop() {
-    print_info "Installing nvtop (AppImage)..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-nvtop.sh" "$@"
-    else
-        print_error "nvtop installation not supported for $OS yet"
-    fi
-}
-
-install_docker() {
-    print_info "Installing Docker..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-docker.sh" "$@"
-    else
-        print_error "Docker installation not supported for $OS yet"
-    fi
-}
-
-install_tailscale() {
-    print_info "Installing Tailscale..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-tailscale.sh" "$@"
-    else
-        print_error "Tailscale installation not supported for $OS yet"
-    fi
-}
-
-install_nvidia_toolkit() {
-    print_info "Installing NVIDIA Container Toolkit..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-nvidia-toolkit.sh" "$@"
-    else
-        print_error "NVIDIA Toolkit installation not supported for $OS yet"
-    fi
-}
-
-install_launcher() {
-    print_info "Installing Application Launcher..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-launcher.sh" "$@"
-    else
-        print_error "Launcher installation not supported for $OS yet"
-    fi
-}
-
-install_flatpak() {
-    print_info "Installing Flatpak + managed GUI apps..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-flatpak.sh" "$@"
-    else
-        print_error "Flatpak installation not supported for $OS yet"
-    fi
-}
-
-setup_keybindings() {
-    print_info "Setting up keybindings..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-keybindings.sh" "$@"
-    else
-        print_error "Keybinding setup not supported for $OS yet"
-    fi
-}
-
-setup_appearance() {
-    print_info "Setting up appearance (Themes & Fonts)..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-appearance.sh" "$@"
-    else
-        print_error "Appearance setup not supported for $OS yet"
-    fi
-}
-
-install_i3() {
-    print_info "Installing i3 Window Manager..."
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-i3.sh" "$@"
-    else
-        print_error "i3 installation not supported for $OS yet"
-    fi
-}
-
-install_essentials() {
-    print_info "Installing Essentials..."
-    install_nix "$@"
-    install_docker "$@"
-    install_ghostty "$@"
-    install_launcher "$@"
-}
-
-install_all() {
-    print_info "Installing Everything..."
-    install_nix "$@"
-    install_docker "$@"
-    install_nvidia_toolkit "$@"
-    install_ghostty "$@"
-    install_launcher "$@"
-    install_i3 "$@"
-    install_flatpak "$@"
-    setup_keybindings "$@"
-    setup_appearance "$@"
-}
-
-# Main execution
-print_header
-detect_os
-
-if [ "$OS" != "debian" ] && [ "$OS" != "ubuntu" ]; then
-    print_warning "This script currently only supports Debian-based systems"
-    print_info "Detected: $OS"
-    exit 1
-fi
-
-# Check if running with arguments
-if [ $# -gt 0 ]; then
-    cmd="$1"
-    shift
-    case "$cmd" in
-        nix)
-            install_nix "$@"
+while (($#)); do
+    case "$1" in
+        --profile|--component|--add|--remove)
+            option="$1"
+            (($# >= 2)) || die "$option requires a value"
+            value="$2"
+            [[ "$value" != --* ]] || die "$option requires a value"
+            case "$option" in
+                --profile) [[ -z "$profile" ]] || die "--profile may be specified only once"; profile="$value" ;;
+                --component) [[ -z "$single_component" ]] || die "--component may be specified only once"; single_component="$value" ;;
+                --add) adds+=("$value") ;;
+                --remove) removes+=("$value") ;;
+            esac
+            shift 2
             ;;
-        docker)
-            install_docker "$@"
-            ;;
-        tailscale)
-            install_tailscale "$@"
-            ;;
-        nvidia|nvidia-toolkit)
-            install_nvidia_toolkit "$@"
-            ;;
-        ghostty)
-            install_ghostty "$@"
-            ;;
-        flatpak)
-            install_flatpak "$@"
-            ;;
-        nvtop)
-            install_nvtop "$@"
-            ;;
-        launcher)
-            install_launcher "$@"
-            ;;
-        i3)
-            install_i3 "$@"
-            ;;
-        keybindings)
-            setup_keybindings "$@"
-            ;;
-        appearance)
-            setup_appearance "$@"
-            ;;
-        essentials)
-            install_essentials "$@"
-            ;;
-        all)
-            install_all "$@"
-            ;;
-        *)
-            echo "Usage: $0 [OPTION] [--plan] [--apps FILE] [--system|--user]"
-            echo ""
-            echo "Options:"
-            echo "  nix             Install Nix package manager"
-            echo "  docker          Install Docker"
-            echo "  tailscale       Install Tailscale and exit-node prerequisites"
-            echo "  nvidia          Install NVIDIA Container Toolkit"
-            echo "  ghostty         Install Ghostty terminal"
-            echo "  flatpak         Install Flatpak + managed GUI apps (configs/flatpak-apps.txt)"
-            echo "  nvtop           Install nvtop GPU monitor (AppImage)"
-            echo "  launcher        Install Rofi launcher"
-            echo "  i3              Install i3 Window Manager"
-            echo "  keybindings     Setup custom keybindings"
-            echo "  appearance      Install themes and fonts"
-            echo "  essentials      Install core tools"
-            echo "  all             Install everything"
-            exit 1
-            ;;
+        --plan) plan=true; shift ;;
+        --yes) assume_yes=true; shift ;;
+        --add-docker-group) add_docker_group=true; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) die "Unknown argument: $1" ;;
     esac
+done
+
+[[ -n "$profile" || -n "$single_component" ]] || die "exactly one --profile or --component is required"
+[[ -z "$profile" || -z "$single_component" ]] || die "--profile and --component cannot be combined"
+
+if [[ -n "$single_component" ]]; then
+    ((${#adds[@]} == 0 && ${#removes[@]} == 0)) || die "--add/--remove can only be used with --profile"
+    is_component "$single_component" || die "Unknown component: $single_component"
+    components=("$single_component")
+    selection_label="Component: $single_component"
 else
-    # Interactive mode
-    while true; do
-        show_menu
-        case $choice in
-            1)
-                install_nix
-                ;;
-            2)
-                install_docker
-                ;;
-            3)
-                install_nvidia_toolkit
-                ;;
-            11)
-                install_tailscale
-                ;;
-            4)
-                install_ghostty
-                ;;
-            5)
-                install_launcher
-                ;;
-            6)
-                install_i3
-                ;;
-            12)
-                install_flatpak
-                ;;
-            7)
-                setup_keybindings
-                ;;
-            8)
-                setup_appearance
-                ;;
-            9)
-                install_essentials
-                ;;
-            10)
-                install_all
-                ;;
-            0)
-                print_info "Exiting..."
-                exit 0
-                ;;
-            *)
-                print_error "Invalid choice. Please try again."
-                ;;
-        esac
-        
-        echo ""
-        read -p "Press Enter to continue..."
+    is_profile "$profile" || die "Unknown profile: $profile"
+    for component in "${adds[@]}" "${removes[@]}"; do
+        [[ -z "$component" ]] || is_component "$component" || die "Unknown component: $component"
     done
+    resolver_args=("$profile" "${adds[@]}")
+    ((${#removes[@]} == 0)) || resolver_args+=(--remove "${removes[@]}")
+    read -r -a components <<<"$(resolve_components "${resolver_args[@]}")"
+    selection_label="Profile: $profile"
 fi
+
+((${#components[@]} > 0)) || die "selection resolves to no components"
+validate_component_dependencies "${components[@]}"
+detect_platform
+validate_platform "$PLATFORM_ID" "$PLATFORM_VERSION" "$PLATFORM_CODENAME" "$PLATFORM_ARCH" "${components[@]}"
+
+printf 'OS: %s %s (%s)\n' "$PLATFORM_ID" "$PLATFORM_VERSION" "$PLATFORM_ARCH"
+printf '%s\n' "$selection_label"
+printf 'Components: %s\n' "${components[*]}"
+for component in "${components[@]}"; do
+    case "$component" in
+        nvidia|i3|keybindings) echo "runtime dependency checks deferred until apply: $component" ;;
+    esac
+done
+
+$plan && exit 0
+
+target_user="$(id -un)"
+home_owner="$(stat -c %U "$HOME" 2>/dev/null)" || die "HOME must be an existing directory"
+validate_target_context "$EUID" "$target_user" "$HOME" "$home_owner"
+command -v apt-get >/dev/null 2>&1 || die "apt-get is required"
+command -v sudo >/dev/null 2>&1 || die "sudo is required"
+[[ -d "$HOME" && -w "$HOME" ]] || die "HOME must be an existing writable directory"
+
+[[ "$(uname -s)" == Linux ]] || die "components require Linux"
+validate_runtime_dependencies apply "${components[@]}"
+
+terminal_selected=false
+for component in "${components[@]}"; do [[ "$component" == ghostty ]] && terminal_selected=true; done
+for component in "${components[@]}"; do
+    if [[ "$component" == i3 || "$component" == keybindings ]]; then
+        if ! $terminal_selected && ! "$SCRIPT_DIR/scripts/open-terminal.sh" --check >/dev/null 2>&1; then
+            die "$component requires a usable terminal or the ghostty component"
+        fi
+    fi
+done
+
+declare -A COMPONENT_SCRIPTS=(
+    [nix]="debian/install-nix.sh"
+    [docker]="debian/install-docker.sh"
+    [nvidia]="debian/install-nvidia-toolkit.sh"
+    [tailscale]="debian/install-tailscale.sh"
+    [ghostty]="debian/install-ghostty.sh"
+    [launcher]="debian/install-launcher.sh"
+    [i3]="debian/install-i3.sh"
+    [keybindings]="debian/setup-keybindings.sh"
+    [appearance]="debian/setup-appearance.sh"
+    [default-shell]="debian/setup-default-shell.sh"
+    [nvtop]="debian/install-nvtop.sh"
+)
+
+export SYSTEM_SETUP_YES=0 SYSTEM_SETUP_ADD_DOCKER_GROUP=0 SYSTEM_SETUP_TARGET_USER="$target_user"
+$assume_yes && export SYSTEM_SETUP_YES=1
+$add_docker_group && export SYSTEM_SETUP_ADD_DOCKER_GROUP=1
+
+for component in "${components[@]}"; do
+    script="$SCRIPT_DIR/${COMPONENT_SCRIPTS[$component]}"
+    [[ -r "$script" ]] || die "Missing component script: $script"
+done
+
+for component in "${components[@]}"; do
+    printf '\n[*] Applying component: %s\n' "$component"
+    bash "$SCRIPT_DIR/${COMPONENT_SCRIPTS[$component]}"
+done
+
+echo "[OK] System setup complete"
