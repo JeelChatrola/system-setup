@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Run behavioral tests
+        run: bash tests/run.sh
+
+      - name: Check Bash syntax
+        run: |
+          set -euo pipefail
+          git ls-files -z '*.sh' | while IFS= read -r -d '' script; do
+            bash -n "$script"
+          done
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck -x -P SCRIPTDIR
+
+      - name: Reject forbidden terminal references
+        run: |
+          if git grep -nEi 'alacri[t]ty|ki[t]ty' --; then
+            echo "Forbidden terminal reference found" >&2
+            exit 1
+          fi

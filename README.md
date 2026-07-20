@@ -1,93 +1,130 @@
 # System Setup Bootstrapper
 
-A lightweight, reliable bootstrapper for Debian/Ubuntu systems.
-It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfiles and get to work.
+An explicit, rerunnable bootstrapper for supported Ubuntu and Debian hosts. It installs system services and native desktop packages; Nix and Home Manager remain responsible for user packages, fonts, and dotfiles.
 
-## 🚀 Quick Start (Fresh Install)
+## Supported Matrix
 
-**1. Clone the repo:**
+| Distribution | Release | Architectures | Notes |
+| --- | --- | --- | --- |
+| Ubuntu | 24.04 (noble) | `x86_64`, `aarch64` | All components except `nvtop` on `aarch64` |
+| Debian | 12 (bookworm) | `x86_64`, `aarch64` | All components except `nvtop` on `aarch64`; Ghostty must exist in configured Debian repositories |
 
-**2. Run the installer:**
+Other distributions, codenames, and releases fail before apply. `nvtop` uses an upstream x86_64 AppImage and is therefore x86_64-only. Desktop package availability is checked by each component after it refreshes APT metadata; an active GUI session is not required.
+
+## Commands
+
+Exactly one profile or one component is required:
+
 ```bash
-./install.sh
+./install.sh --profile PROFILE [--add COMPONENT]... [--remove COMPONENT]... [--plan] [--yes] [--add-docker-group]
+./install.sh --component COMPONENT [--plan] [--yes] [--add-docker-group]
 ```
 
-**3. Choose an option:**
-*   **Option 10 (Install Everything):** Sets up Nix, Docker, Ghostty, i3, Rofi, and Appearance.
-*   **Option 6 (i3 Window Manager):** Installs i3 and its window-manager utilities. Configure Rofi and Polybar with their separate files below.
+Examples:
 
----
+```bash
+./install.sh --profile workstation --plan
+./install.sh --profile workstation --add nvidia --add tailscale --yes
+./install.sh --profile personal --remove appearance --add default-shell
+./install.sh --component tailscale --yes
+./install.sh --component docker --add-docker-group --yes
+```
 
-## 🛠 What's Included?
+`--plan` parses `/etc/os-release` as data, validates the platform, and resolves the final component list without writes, `sudo`, Docker daemon queries, package commands, downloads, or network access. Checks that require Docker, Rofi, a terminal, or package metadata are explicitly deferred to apply. `--yes` answers supported component confirmations; it does not imply Docker group membership. Additions and removals are valid only with profiles.
 
-### Core System
-*   **Nix Package Manager:** (Determinate Systems) For your CLI tools & dev env.
-*   **Docker:** Official Docker Engine + Compose.
-*   **NVIDIA Toolkit:** GPU support for Docker containers.
-*   **Tailscale:** System VPN service, available with `./install.sh tailscale`.
+Run apply as the intended non-root user. Direct root execution is refused because user-owned files, login-shell changes, and optional group membership must target that user consistently; the component scripts invoke `sudo` for system changes. Help and planning remain available as root. `SYSTEM_SETUP_OS_RELEASE`, `SYSTEM_SETUP_ARCH`, and systemd overrides are ignored unless the internal `SYSTEM_SETUP_TEST_MODE=1` test contract is explicitly enabled.
 
-### Desktop Environment (The "Clean" Setup)
-*   **Window Manager:** i3 (Tiling WM)
-*   **Terminal:** Ghostty (GPU accelerated; apt/PPA via system-setup).
-*   **Launcher:** Rofi (Modern App Launcher)
-*   **Bar:** Polybar (Beautiful status bar)
-*   **Wallpaper:** Nitrogen (Wallpaper manager)
-*   **Appearance:** Installs the Gruvbox GTK theme, Papirus icons, and JetBrainsMono Nerd Font files. Select them in your desktop environment after installation.
+## Profiles
 
----
+Components always run in canonical order, regardless of option order. Duplicate additions are ignored and removals win.
 
-## ⌨️ Cheat Sheet (i3)
+| Profile | Exact expansion |
+| --- | --- |
+| `base` | `nix` |
+| `personal` | `nix ghostty launcher appearance` |
+| `workstation` | `nix docker ghostty launcher i3 keybindings appearance` |
+| `server` | `nix docker` |
 
-Once installed, here is how you survive:
+## Components
+
+| Component | Main side effects and ownership |
+| --- | --- |
+| `nix` | Installs pinned Determinate Nix when absent and ensures `nix-command`/flakes are enabled. Does not add channels or install Home Manager. |
+| `docker` | Neutralizes stale installer-owned `docker.list`/`docker.sources` files before the first APT update, then converges Docker's canonical official repository, Engine packages, Compose plugin, and systemd service. It verifies the daemon through `sudo docker info` and does not change group membership by default. |
+| `nvidia` | Installs NVIDIA Container Toolkit when needed, always converges the Docker runtime, and verifies Docker through sudo. Requires selected `docker` or a working existing privileged Docker installation. |
+| `tailscale` | Installs and enables `tailscaled`; enables IPv4/IPv6 forwarding for exit-node use. Authentication and route advertisement remain manual. |
+| `ghostty` | Installs Ghostty from APT. Ubuntu may use the validated noble PPA fallback; Debian never receives an Ubuntu PPA. |
+| `launcher` | Owns the Rofi package and `~/.config/rofi/config.rasi`. |
+| `i3` | Installs i3, Polybar, wallpaper tools, and managed i3/Polybar files. It does not own Rofi and standalone apply requires Rofi to exist before any mutation. |
+| `keybindings` | Installs the terminal helper and configures GNOME `Ctrl+Alt+T` when applicable. |
+| `appearance` | Installs Papirus icons and builds `Gruvbox-Dark`, `-hdpi`, and `-xhdpi` inside one marked, versioned bundle. Only `~/.themes/Gruvbox-Dark` is published; arbitrary or broken links and unmanaged files/directories at that path are left byte-identical and require manual removal. It does not install fonts. |
+| `default-shell` | Requires zsh from the separately deployed nix-config at `~/.nix-profile/bin/zsh`, registers it in `/etc/shells`, and changes the login shell after confirmation or `--yes`. It never mutates the Nix profile. |
+| `nvtop` | Installs and verifies the pinned upstream x86_64 AppImage in `~/.local/bin`. |
+
+Nix owns user fonts. Home Manager configuration and dotfiles are handled separately.
+
+## Docker Group Warning
+
+Rootful Docker group membership is effectively root access. The installer never adds a user automatically. Pass `--add-docker-group` only when that access is intended; log out and back in afterward. This flag has no effect unless the `docker` component is selected.
+
+## Terminal Shortcuts
+
+The installed `open-terminal` helper chooses `$TERMINAL`, `ghostty`, `x-terminal-emulator`, `i3-sensible-terminal`, then `gnome-terminal`. It rejects itself as `$TERMINAL` to prevent recursion. Standalone `i3` requires both existing Rofi and a usable terminal before writes; standalone `keybindings` requires a terminal. The workstation profile installs launcher and Ghostty first.
+
+Key i3 shortcuts:
 
 | Action | Shortcut |
-| :--- | :--- |
-| **Open Terminal** | `Win + Enter` |
-| **Open Apps** | `Win + d` (Type app name) |
-| **Close Window** | `Win + Shift + q` |
-| **Help Popup** | `Win + Shift + ?` |
-| **Restart i3** | `Win + Shift + r` (Use after config changes) |
-| **Exit/Logout** | `Win + Shift + e` |
+| --- | --- |
+| Open terminal | `Win + Enter` |
+| Open launcher | `Win + d` |
+| Close window | `Win + Shift + q` |
+| Help | `Win + Shift + ?` |
+| Restart i3 | `Win + Shift + r` |
 
----
+## Reruns
 
-## 📂 Configuration
+Component scripts verify existing installations and continue to repair required configuration instead of treating an existing executable as completion. Managed files are replaced atomically where practical. Package managers and service enablement are convergent, though APT metadata refreshes and remote repository checks still occur on apply. Existing i3 configuration is backed up before replacement when that component runs.
 
-Don't edit files in `/etc` or `~/.config` directly if you want to save them.
-Edit them in **`configs/`** and re-run the installer (or copy them manually).
+No universal rollback is attempted. Review `--plan` and the component side effects before apply.
 
-*   **i3:** `configs/i3-config`
-*   **Rofi:** `configs/rofi-config.rasi`
-*   **Polybar configuration:** `configs/polybar-config.ini`
-*   **Polybar start script:** `configs/polybar-launch.sh`
+## Current Workstation Migration
 
----
+Migration of the current workstation is a mandatory clean break from the previous installer. Use the system profile with both host capabilities added explicitly:
 
-## 🔄 Workflow for New Machines
+```bash
+./install.sh --profile workstation --add nvidia --add tailscale --plan
+./install.sh --profile workstation --add nvidia --add tailscale --yes
+```
 
-1.  **Install OS:** Ubuntu Server or Desktop (Minimal).
-2.  **Run this repo:** `./install.sh` -> Install Everything.
-3.  **Reboot/Login:** Select `i3` session at login (if graphical) or just log in.
-4. **Next Steps** (separate repos — clone yourself after git/SSH is ready):
-    *   Clone your Home Manager repo and private ai-stack repo
-    *   Deploy dotfiles from your nix-config checkout
-    *   Install GUI apps manually or via Flatpak (Chrome, Zen, Cursor)
+Do not apply the bare workstation profile on that host: omitting `--add nvidia --add tailscale` would stop converging its current GPU-container and Tailscale capabilities. The workstation preset intentionally remains `nix docker ghostty launcher i3 keybindings appearance`; hardware- and host-specific services stay explicit additions rather than silently becoming defaults for every workstation.
 
-## ❌ What is NOT included?
-*   **Browsers:** Install Chrome/Zen manually (they update too often).
-*   **Editors:** Install VSCode/Cursor manually.
-*   **GUI apps:** Install via apt/PPA/Flatpak in system-setup — not Nix (you are not on NixOS).
-*   **User Dotfiles:** Manage your `.zshrc`, `.gitconfig` via Home Manager (Nix is for CLI/dotfiles only).
+## Fresh Machine Sequence
 
-## Tailscale Exit Node
+1. Install Ubuntu 24.04 or Debian 12 and ensure the user has `sudo` access and network connectivity.
+2. Clone this repository using the machine's chosen authentication setup.
+3. Run `./install.sh --profile workstation --plan` or the appropriate server/personal profile. For the current workstation, use the mandatory migration command above instead.
+4. Apply with `./install.sh --profile workstation --yes`. For the current workstation, retain both explicit additions shown above.
+5. Reboot or log out, then select i3 if installed.
+6. Deploy Home Manager and dotfiles separately.
+7. Add explicit host extras as needed. NVIDIA and Tailscale are mandatory explicit additions on the current workstation.
 
-Run `./install.sh tailscale` to install the matching `tailscale` client and `tailscaled` service from Tailscale's signed APT repository. The installer enables IP forwarding, but does not authenticate the host, advertise routes, or change firewall rules.
-
-After installation, authenticate and advertise the exit node manually:
+For a Tailscale exit node, authenticate and advertise it after installation:
 
 ```bash
 sudo tailscale up
 sudo tailscale set --advertise-exit-node
 ```
 
-Approve the advertised exit node in the [Tailscale admin console](https://login.tailscale.com/admin/machines). Keep the host firewall's forwarding policy restrictive; Tailscale manages only its own traffic.
+Approve the machine in the Tailscale admin console. The installer does not authenticate Tailscale, advertise routes, or broaden firewall forwarding policy.
+
+## Validation
+
+Run local validation before review:
+
+```bash
+bash tests/run.sh
+git ls-files -z '*.sh' | while IFS= read -r -d '' script; do bash -n "$script"; done
+git ls-files -z '*.sh' | xargs -0 shellcheck -x -P SCRIPTDIR
+git diff --check
+if git grep -nEi 'alacri[t]ty|ki[t]ty' --; then exit 1; fi
+```

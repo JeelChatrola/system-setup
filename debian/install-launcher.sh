@@ -1,7 +1,10 @@
 #!/bin/bash
 # Install Rofi application launcher on Debian-based systems
 
-set -e
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "[*] Installing Rofi Launcher..."
 
@@ -15,13 +18,11 @@ fi
 if command -v rofi &> /dev/null; then
     echo "[OK] Rofi is already installed"
     rofi -version
-    exit 0
+else
+    echo "[*] Installing Rofi..."
+    sudo apt update
+    sudo apt install -y rofi
 fi
-
-# Install Rofi
-echo "[*] Installing Rofi..."
-sudo apt update
-sudo apt install -y rofi
 
 # Verify installation
 if command -v rofi &> /dev/null; then
@@ -42,11 +43,17 @@ else
     exit 1
 fi
 
+mkdir -p "$HOME/.config/rofi"
+rofi_tmp="$(mktemp "$HOME/.config/rofi/.config.XXXXXX")"
+install -m 0644 "$REPO_ROOT/configs/rofi-config.rasi" "$rofi_tmp"
+mv "$rofi_tmp" "$HOME/.config/rofi/config.rasi"
+
 # Create setup reminder script
 REMINDER_SCRIPT="$HOME/.local/bin/setup-launcher-hotkey"
 mkdir -p "$HOME/.local/bin"
+reminder_tmp="$(mktemp "$HOME/.local/bin/.setup-launcher-hotkey.XXXXXX")"
 
-cat > "$REMINDER_SCRIPT" << 'EOF'
+cat >"$reminder_tmp" <<'EOF'
 #!/bin/bash
 # Helper script to set up launcher hotkey
 
@@ -54,7 +61,7 @@ echo "[*] Setting up launcher hotkey (Ctrl+Space)..."
 echo ""
 
 # Detect desktop environment
-if [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] || [ "$XDG_CURRENT_DESKTOP" = "ubuntu:GNOME" ]; then
+if [ "${XDG_CURRENT_DESKTOP:-}" = "GNOME" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "ubuntu:GNOME" ]; then
     echo "[*] Detected GNOME desktop"
     echo ""
     echo "To set Ctrl+Space for your launcher:"
@@ -63,7 +70,7 @@ if [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] || [ "$XDG_CURRENT_DESKTOP" = "ubuntu:GN
     echo "3. Name: 'Launcher'"
     echo "4. Command: ulauncher-toggle (or 'albert toggle' or 'rofi -show drun')"
     echo "5. Set shortcut: Ctrl+Space"
-    
+
 elif [ "$XDG_CURRENT_DESKTOP" = "KDE" ]; then
     echo "[*] Detected KDE desktop"
     echo ""
@@ -71,9 +78,9 @@ elif [ "$XDG_CURRENT_DESKTOP" = "KDE" ]; then
     echo "1. System Settings → Shortcuts → Custom Shortcuts"
     echo "2. Add new shortcut with your launcher command"
     echo "3. Set to Ctrl+Space"
-    
+
 else
-    echo "[*] Desktop environment: $XDG_CURRENT_DESKTOP"
+    echo "[*] Desktop environment: ${XDG_CURRENT_DESKTOP:-unknown}"
     echo ""
     echo "Add a custom keyboard shortcut for Ctrl+Space to launch your chosen launcher"
 fi
@@ -82,7 +89,8 @@ echo ""
 echo "[TIP] Note: You may need to disable existing Ctrl+Space shortcuts first"
 EOF
 
-chmod +x "$REMINDER_SCRIPT"
+chmod 0755 "$reminder_tmp"
+mv "$reminder_tmp" "$REMINDER_SCRIPT"
 
 echo ""
 echo "=========================================="
