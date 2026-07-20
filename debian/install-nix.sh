@@ -87,6 +87,7 @@ echo "[*] Downloading Determinate Systems Nix Installer v${INSTALLER_VERSION}...
 
 # Source Nix for current session
   if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
+    # shellcheck source=/dev/null
     . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 elif [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
     # shellcheck source=/dev/null
