@@ -285,8 +285,19 @@ verify_fixture_key() {
 assert_success "expected repository key fingerprint is accepted" verify_fixture_key 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 assert_failure "unexpected repository key fingerprint is rejected" verify_fixture_key 0000000000000000000000000000000000000000
 
-printf '%s\n' "deb https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" >"$TMP/nvidia-valid.list"
+printf '%s\n' \
+    "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" \
+    "#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/experimental/deb/\$(ARCH) /" \
+    >"$TMP/nvidia-valid.list"
 assert_success "strict NVIDIA repository definition is accepted" validate_nvidia_repository_file "$TMP/nvidia-valid.list"
+printf '%s\n' \
+    "deb https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" \
+    "#deb https://nvidia.github.io/libnvidia-container/experimental/deb/\$(ARCH) /" \
+    >"$TMP/nvidia-download.list"
+assert_success "representative NVIDIA repository data is staged and validated" \
+    prepare_nvidia_repository_file "$TMP/nvidia-download.list" "$TMP/nvidia-staged.list"
+assert_eq "NVIDIA stable and commented experimental entries use the keyring" \
+    "$(<"$TMP/nvidia-valid.list")" "$(<"$TMP/nvidia-staged.list")"
 printf '%s\n' "deb [trusted=yes] https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" >"$TMP/nvidia-malicious.list"
 assert_failure "NVIDIA trusted=yes repository definition is rejected" validate_nvidia_repository_file "$TMP/nvidia-malicious.list"
 printf '%s\n' "deb https://evil.example/stable/deb/\$(ARCH) /" >"$TMP/nvidia-domain.list"
@@ -294,7 +305,8 @@ assert_failure "NVIDIA unexpected repository domain is rejected" validate_nvidia
 printf '%s\n' 'Types: deb' >"$TMP/nvidia-malformed.list"
 assert_failure "malformed NVIDIA repository definition is rejected" validate_nvidia_repository_file "$TMP/nvidia-malformed.list"
 printf '%s\n' \
-    "deb https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" \
+    "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" \
+    "#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/experimental/deb/\$(ARCH) /" \
     "deb https://evil.example/stable/deb/\$(ARCH) /" >"$TMP/nvidia-extra.list"
 assert_failure "NVIDIA extra active repository line is rejected" validate_nvidia_repository_file "$TMP/nvidia-extra.list"
 
@@ -483,7 +495,11 @@ while [ "$#" -gt 0 ]; do
 done
 case "$url" in
     *nvidia-container-toolkit.list)
-        content="${MOCK_REPOSITORY_CONTENT:-deb https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /}" ;;
+        if [ -n "${MOCK_NVIDIA_REPOSITORY_URL_LOG:-}" ]; then printf '%s\n' "$url" >"$MOCK_NVIDIA_REPOSITORY_URL_LOG"; fi
+        if [ "${MOCK_NVIDIA_REPOSITORY_DOWNLOAD_FAIL:-0}" = 1 ]; then exit 22; fi
+        content="${MOCK_REPOSITORY_CONTENT:-$(printf '%s\n' \
+            'deb https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /' \
+            '#deb https://nvidia.github.io/libnvidia-container/experimental/deb/$(ARCH) /')}" ;;
     *.tailscale-keyring.list)
         content="${MOCK_REPOSITORY_CONTENT:-deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bookworm main}" ;;
     *) content='mock-key' ;;
@@ -521,6 +537,14 @@ cat >"$MOCKBIN/lspci" <<'EOF'
 printf 'NVIDIA Corporation Device\n'
 EOF
 chmod +x "$MOCKBIN"/*
+NVIDIA_INSTALL_BIN="$TMP/nvidia-install-bin"
+mkdir "$NVIDIA_INSTALL_BIN"
+for command_name in apt-get curl docker gpg lspci sudo; do
+    ln -s "$MOCKBIN/$command_name" "$NVIDIA_INSTALL_BIN/$command_name"
+done
+for command_name in bash dirname grep mktemp rm sed; do
+    ln -s "$(command -v "$command_name")" "$NVIDIA_INSTALL_BIN/$command_name"
+done
 
 call_before() {
     local first="$1" second="$2" first_line second_line
@@ -602,7 +626,7 @@ fi
 
 mv "$MOCKBIN/nvidia-ctk" "$TMP/nvidia-ctk.mock"
 : >"$CALL_LOG"
-if PATH="$MOCKBIN:$PATH" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
+if PATH="$NVIDIA_INSTALL_BIN" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" SYSTEM_SETUP_ARCH=x86_64 \
     SYSTEM_SETUP_HAS_SYSTEMD=1 SYSTEM_SETUP_YES=1 \
     MOCK_KEY_FINGERPRINT=0000000000000000000000000000000000000000 \
     "$ROOT/debian/install-nvidia-toolkit.sh" >/dev/null 2>&1; then
@@ -619,7 +643,30 @@ mv "$TMP/nvidia-ctk.mock" "$MOCKBIN/nvidia-ctk"
 
 mv "$MOCKBIN/nvidia-ctk" "$TMP/nvidia-ctk.mock"
 : >"$CALL_LOG"
-if PATH="$MOCKBIN:$PATH" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
+NVIDIA_REPOSITORY_URL_LOG="$TMP/nvidia-repository-url.log"
+if PATH="$NVIDIA_INSTALL_BIN" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" SYSTEM_SETUP_ARCH=x86_64 \
+    SYSTEM_SETUP_HAS_SYSTEMD=1 SYSTEM_SETUP_YES=1 \
+    MOCK_KEY_FINGERPRINT=C95B321B61E88C1809C4F759DDCAE044F796ECB0 \
+    MOCK_NVIDIA_REPOSITORY_URL_LOG="$NVIDIA_REPOSITORY_URL_LOG" \
+    MOCK_NVIDIA_REPOSITORY_DOWNLOAD_FAIL=1 \
+    "$ROOT/debian/install-nvidia-toolkit.sh" >/dev/null 2>&1; then
+    fail "NVIDIA repository download failure propagates"
+else
+    pass "NVIDIA repository download failure propagates"
+fi
+assert_eq "NVIDIA requests the documented generic stable deb repository endpoint" \
+    "https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list" \
+    "$(<"$NVIDIA_REPOSITORY_URL_LOG")"
+if grep -q '/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\|/etc/apt/sources.list.d/nvidia-container-toolkit.list' "$CALL_LOG"; then
+    fail "failed NVIDIA repository download aborts before privileged replacement"
+else
+    pass "failed NVIDIA repository download aborts before privileged replacement"
+fi
+mv "$TMP/nvidia-ctk.mock" "$MOCKBIN/nvidia-ctk"
+
+mv "$MOCKBIN/nvidia-ctk" "$TMP/nvidia-ctk.mock"
+: >"$CALL_LOG"
+if PATH="$NVIDIA_INSTALL_BIN" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" SYSTEM_SETUP_ARCH=x86_64 \
     SYSTEM_SETUP_HAS_SYSTEMD=1 SYSTEM_SETUP_YES=1 \
     MOCK_KEY_FINGERPRINT=C95B321B61E88C1809C4F759DDCAE044F796ECB0 \
     MOCK_REPOSITORY_CONTENT="deb [trusted=yes] https://evil.example/stable/deb/\$(ARCH) /" \
