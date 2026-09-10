@@ -11,6 +11,7 @@ source "$SCRIPT_DIR/../lib/supply-chain.sh"
 source "$SCRIPT_DIR/../lib/repository-data.sh"
 
 NVIDIA_KEY_FINGERPRINT=C95B321B61E88C1809C4F759DDCAE044F796ECB0
+NVIDIA_REPOSITORY_URL=https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
 
 echo "[*] Ensuring NVIDIA Container Toolkit is configured..."
 command -v apt-get >/dev/null 2>&1 || { echo "[ERROR] This script requires apt-get" >&2; exit 1; }
@@ -37,14 +38,11 @@ if ! command -v nvidia-ctk >/dev/null 2>&1; then
         --output "$temp_dir/key" https://nvidia.github.io/libnvidia-container/gpgkey
     verify_openpgp_fingerprint "$temp_dir/key" "$NVIDIA_KEY_FINGERPRINT"
     curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
-        --output "$temp_dir/repository.list" https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
-    validate_nvidia_repository_file "$temp_dir/repository.list"
+        --output "$temp_dir/repository.download" "$NVIDIA_REPOSITORY_URL"
+    prepare_nvidia_repository_file "$temp_dir/repository.download" "$temp_dir/repository.list"
     gpg --batch --dearmor <"$temp_dir/key" >"$temp_dir/key.gpg"
-    printf '%s\n' \
-        "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" \
-        >"$temp_dir/signed.list"
     sudo install -m 0644 "$temp_dir/key.gpg" /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-    sudo install -m 0644 "$temp_dir/signed.list" /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo install -m 0644 "$temp_dir/repository.list" /etc/apt/sources.list.d/nvidia-container-toolkit.list
     sudo apt-get update
     sudo apt-get install -y nvidia-container-toolkit
 fi
