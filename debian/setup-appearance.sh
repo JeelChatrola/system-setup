@@ -17,8 +17,12 @@ TEMP_DIR=""
 THEME_BUILD_DEST=""
 
 cleanup() {
-    [[ -n "$TEMP_DIR" ]] && rm -rf "$TEMP_DIR"
-    [[ -n "$THEME_BUILD_DEST" ]] && rm -rf "$THEME_BUILD_DEST"
+    if [[ -n "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+    fi
+    if [[ -n "$THEME_BUILD_DEST" ]]; then
+        rm -rf "$THEME_BUILD_DEST"
+    fi
 }
 trap cleanup EXIT
 
