@@ -29,4 +29,5 @@ if [[ -z "$terminal" ]]; then
 fi
 
 [[ "${1:-}" == --check ]] && exit 0
+unset TERMINAL
 exec "$terminal" "$@"

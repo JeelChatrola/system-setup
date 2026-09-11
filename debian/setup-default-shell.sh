@@ -8,6 +8,12 @@ if [[ ! -x "$zsh_path" ]]; then
     exit 1
 fi
 
+if ! username="$(id -un)" || [[ -z "$username" ]] \
+    || ! current_shell="$(getent passwd "$username" | cut -s -d: -f7)" || [[ -z "$current_shell" ]]; then
+    echo "[ERROR] Unable to look up the current user's passwd shell; default shell unchanged. Check the passwd/NSS configuration, then rerun." >&2
+    exit 1
+fi
+
 if ! grep -Fxq "$zsh_path" /etc/shells; then
     shells_tmp="$(mktemp)"
     trap 'rm -f "$shells_tmp"' EXIT
@@ -16,7 +22,7 @@ if ! grep -Fxq "$zsh_path" /etc/shells; then
     sudo install -m 0644 "$shells_tmp" /etc/shells
 fi
 
-if [[ "${SHELL:-}" == "$zsh_path" ]] || [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" == "$zsh_path" ]]; then
+if [[ "$current_shell" == "$zsh_path" ]]; then
     echo "[OK] Default shell is already $zsh_path"
     exit 0
 fi
@@ -28,8 +34,8 @@ if [[ "${SYSTEM_SETUP_YES:-0}" != 1 ]]; then
 fi
 
 chsh -s "$zsh_path"
-[[ "$(getent passwd "$(id -un)" | cut -d: -f7)" == "$zsh_path" ]] || {
-    echo "[ERROR] Default shell change did not take effect" >&2
+if ! current_shell="$(getent passwd "$username" | cut -s -d: -f7)" || [[ "$current_shell" != "$zsh_path" ]]; then
+    echo "[ERROR] Could not verify the default shell change from passwd" >&2
     exit 1
-}
+fi
 echo "[OK] Default shell changed to $zsh_path; it will be used at next login"
