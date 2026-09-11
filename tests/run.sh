@@ -537,6 +537,7 @@ EOF
 cat >"$MOCKBIN/curl" <<'EOF'
 #!/bin/sh
 printf 'curl %s\n' "$*" >>"$CALL_LOG"
+[ "${DOCKER_FAIL_STAGE:-}" != download ] || exit 22
 output=
 url=
 while [ "$#" -gt 0 ]; do
@@ -564,10 +565,15 @@ cat >"$MOCKBIN/gpg" <<'EOF'
 for argument do
     if [ "$argument" = --show-keys ]; then
         printf 'pub:-:4096:1:0000000000000000:0:0::::::\n'
-        printf 'fpr:::::::::%s:\n' "${MOCK_KEY_FINGERPRINT:-9DC858229FC7DD38854AE2D88D81803C0EBFCD88}"
+        if [ "${DOCKER_FAIL_STAGE:-}" = fingerprint ]; then
+            printf 'fpr:::::::::0000000000000000000000000000000000000000:\n'
+        else
+            printf 'fpr:::::::::%s:\n' "${MOCK_KEY_FINGERPRINT:-9DC858229FC7DD38854AE2D88D81803C0EBFCD88}"
+        fi
         exit 0
     fi
 done
+[ "${DOCKER_FAIL_STAGE:-}" != dearmor ] || exit 1
 cat
 EOF
 cat >"$MOCKBIN/dpkg" <<'EOF'
@@ -606,23 +612,78 @@ call_before() {
     [[ -n "$first_line" && -n "$second_line" && "$first_line" -lt "$second_line" ]]
 }
 
+DOCKER_BIN="$TMP/docker-bin"
+DOCKER_TEST_ROOT="$TMP/docker-root"
+export DOCKER_TEST_ROOT
+mkdir -p "$DOCKER_BIN" "$DOCKER_TEST_ROOT/etc/apt/sources.list.d" "$DOCKER_TEST_ROOT/tmp"
+cat >"$DOCKER_BIN/sudo" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'sudo %s\n' "$*" >>"$CALL_LOG"
+operation="$1"
+shift
+case "$operation" in
+    apt-get)
+        case "${DOCKER_FAIL_STAGE:-}:$*" in
+            dependency-update:update|dependencies:install*ca-certificates*|packages:install*docker-ce*) exit 42 ;;
+        esac
+        # Both stale source forms must be absent during dependency setup.
+        if [[ "$*" == 'install -y ca-certificates curl gnupg' ]]; then
+            for name in docker.list docker.sources; do
+                [[ ! -e "$DOCKER_TEST_ROOT/etc/apt/sources.list.d/$name" && ! -L "$DOCKER_TEST_ROOT/etc/apt/sources.list.d/$name" ]] || exit 43
+            done
+        fi
+        exit 0 ;;
+    docker) exec docker "$@" ;;
+    systemctl|usermod) exit 0 ;;
+    sh|mktemp|mv|install|rm|rmdir) ;;
+    *) exit 99 ;;
+esac
+arguments=()
+for argument do
+    case "$argument" in
+        /etc/apt/*) argument="$DOCKER_TEST_ROOT$argument" ;;
+        "$DOCKER_TEST_ROOT"/*) ;;
+        /*) printf 'Unsafe mock path: %s\n' "$argument" >&2; exit 99 ;;
+    esac
+    arguments+=("$argument")
+done
+case "${DOCKER_FAIL_STAGE:-}:$operation:$*" in
+    probe:sh:*' sh /etc/apt/sources.list.d/docker.sources') exit 1 ;;
+    backup:mv:*docker.sources*|keyring:install:*docker.gpg|stage:install:*replacement|publish:mv:*replacement*) exit 42 ;;
+    interrupt-*:mv:*replacement*)
+        "$operation" "${arguments[@]}"
+        kill -s "${DOCKER_FAIL_STAGE#interrupt-}" "$PPID"
+        exit 0 ;;
+esac
+exec "$operation" "${arguments[@]}"
+EOF
+chmod +x "$DOCKER_BIN/sudo"
+
 : >"$CALL_LOG"
-PATH="$MOCKBIN:$PATH" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
+printf '%s\n' 'old list' >"$DOCKER_TEST_ROOT/etc/apt/sources.list.d/docker.list"
+printf '%s\n' 'old sources' >"$DOCKER_TEST_ROOT/etc/apt/sources.list.d/docker.sources"
+PATH="$DOCKER_BIN:$MOCKBIN:$PATH" TMPDIR="$DOCKER_TEST_ROOT/tmp" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
     SYSTEM_SETUP_HAS_SYSTEMD=1 SYSTEM_SETUP_ADD_DOCKER_GROUP=0 "$ROOT/debian/install-docker.sh" >/dev/null 2>&1
 DOCKER_MOCK_STATUS=$?
 assert_eq "mocked Docker apply succeeds" "0" "$DOCKER_MOCK_STATUS"
+DOCKER_EXPECTED_SOURCE='deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable'
+assert_eq "Docker publishes the verified replacement source" "$DOCKER_EXPECTED_SOURCE" \
+    "$(<"$DOCKER_TEST_ROOT/etc/apt/sources.list.d/docker.list")"
+assert_success "Docker retires the previous deb822 source on success" \
+    test ! -e "$DOCKER_TEST_ROOT/etc/apt/sources.list.d/docker.sources"
 if grep -q 'apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin' "$CALL_LOG"; then
     pass "Docker always converges official packages and Compose"
 else
     fail "Docker always converges official packages and Compose"
 fi
 if grep -q 'curl .*download.docker.com/linux/debian/gpg' "$CALL_LOG"; then pass "Docker converges official repository"; else fail "Docker converges official repository"; fi
-if grep -q 'sudo rm -f /etc/apt/sources.list.d/docker.list /etc/apt/sources.list.d/docker.sources' "$CALL_LOG"; then
+if grep -q 'sudo mv -T /etc/apt/sources.list.d/docker.sources ' "$CALL_LOG"; then
     pass "Docker neutralizes both owned stale source forms"
 else
     fail "Docker neutralizes both owned stale source forms"
 fi
-if call_before 'sudo rm -f /etc/apt/sources.list.d/docker.list /etc/apt/sources.list.d/docker.sources' 'sudo apt-get update'; then
+if call_before 'sudo mv -T /etc/apt/sources.list.d/docker.sources ' 'sudo apt-get update'; then
     pass "Docker neutralizes stale sources before first apt update"
 else
     fail "Docker neutralizes stale sources before first apt update"
@@ -631,7 +692,7 @@ if grep -q 'sudo systemctl enable --now docker' "$CALL_LOG"; then pass "Docker c
 if grep -q '^sudo docker info$' "$CALL_LOG"; then pass "Docker verifies daemon with privileged access"; else fail "Docker verifies daemon with privileged access"; fi
 
 : >"$CALL_LOG"
-if PATH="$MOCKBIN:$PATH" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
+if PATH="$DOCKER_BIN:$MOCKBIN:$PATH" TMPDIR="$DOCKER_TEST_ROOT/tmp" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
     SYSTEM_SETUP_HAS_SYSTEMD=1 SYSTEM_SETUP_ADD_DOCKER_GROUP=0 MOCK_DOCKER_INFO_FAIL=1 \
     "$ROOT/debian/install-docker.sh" >/dev/null 2>&1; then
     fail "Docker daemon verification failure propagates"
@@ -640,7 +701,7 @@ else
 fi
 
 : >"$CALL_LOG"
-if PATH="$MOCKBIN:$PATH" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
+if PATH="$DOCKER_BIN:$MOCKBIN:$PATH" TMPDIR="$DOCKER_TEST_ROOT/tmp" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" \
     SYSTEM_SETUP_HAS_SYSTEMD=1 SYSTEM_SETUP_ADD_DOCKER_GROUP=0 \
     MOCK_KEY_FINGERPRINT=0000000000000000000000000000000000000000 \
     "$ROOT/debian/install-docker.sh" >/dev/null 2>&1; then
@@ -648,11 +709,76 @@ if PATH="$MOCKBIN:$PATH" SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/
 else
     pass "Docker rejects a repository key fingerprint mismatch"
 fi
-if grep -q '/etc/apt/keyrings/docker.gpg\|/etc/apt/sources.list.d/docker.list$' "$CALL_LOG"; then
+if grep -q '^sudo install .*docker.gpg\|^sudo mv .*replacement /etc/apt/sources.list.d/docker.list$' "$CALL_LOG"; then
     fail "Docker key mismatch aborts before keyring and source installation"
 else
     pass "Docker key mismatch aborts before keyring and source installation"
 fi
+
+for docker_layout in regular symlinks absent sources-only; do
+    for docker_stage in probe backup dependency-update dependencies download fingerprint dearmor keyring stage publish interrupt-TERM interrupt-INT; do
+        [[ "$docker_layout:$docker_stage" != absent:backup ]] || continue
+        docker_sources="$DOCKER_TEST_ROOT/etc/apt/sources.list.d"
+        rm -rf "$docker_sources"
+        mkdir "$docker_sources"
+        case "$docker_layout" in
+            regular)
+                printf '%s\n' 'previous list bytes' >"$docker_sources/docker.list"
+                printf '%s\n' 'previous deb822 bytes' >"$docker_sources/docker.sources"
+                chmod 0640 "$docker_sources/docker.list"
+                chmod 0600 "$docker_sources/docker.sources" ;;
+            symlinks)
+                printf '%s\n' 'symlink target bytes' >"$docker_sources/target"
+                ln -s target "$docker_sources/docker.list"
+                ln -s missing-target "$docker_sources/docker.sources" ;;
+            sources-only)
+                printf '%s\n' 'previous deb822 bytes' >"$docker_sources/docker.sources"
+                chmod 0600 "$docker_sources/docker.sources" ;;
+        esac
+        cp -a "$docker_sources" "$DOCKER_TEST_ROOT/expected"
+        docker_metadata_before="$(stat -c '%n %a %u %g %i' "$docker_sources"/* 2>/dev/null || true)"
+        : >"$CALL_LOG"
+        if env PATH="$DOCKER_BIN:$MOCKBIN:$PATH" TMPDIR="$DOCKER_TEST_ROOT/tmp" \
+            SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" SYSTEM_SETUP_ARCH=x86_64 \
+            SYSTEM_SETUP_HAS_SYSTEMD=0 SYSTEM_SETUP_ADD_DOCKER_GROUP=0 DOCKER_FAIL_STAGE="$docker_stage" \
+            "$ROOT/debian/install-docker.sh" >/dev/null 2>&1; then
+            docker_status=0
+        else
+            docker_status=$?
+        fi
+        case "$docker_stage" in
+            interrupt-TERM) assert_eq "Docker TERM interruption propagates ($docker_layout)" 143 "$docker_status" ;;
+            interrupt-INT) assert_eq "Docker INT interruption propagates ($docker_layout)" 130 "$docker_status" ;;
+            *) assert_failure "Docker $docker_stage failure propagates ($docker_layout)" test "$docker_status" -eq 0 ;;
+        esac
+        if [[ "$docker_stage" == probe ]]; then
+            assert_failure "Docker probe error aborts before APT ($docker_layout)" grep -q 'sudo apt-get' "$CALL_LOG"
+        fi
+        # diff cannot compare dangling links, so compare those explicitly.
+        if [[ "$docker_layout" == symlinks ]]; then
+            assert_eq "Docker $docker_stage preserves source symlink" target "$(readlink "$docker_sources/docker.list")"
+            assert_eq "Docker $docker_stage preserves dangling symlink" missing-target "$(readlink "$docker_sources/docker.sources")"
+            assert_success "Docker $docker_stage preserves symlink target contents" \
+                cmp "$DOCKER_TEST_ROOT/expected/target" "$docker_sources/target"
+        else
+            assert_success "Docker $docker_stage preserves source contents ($docker_layout)" \
+                diff -r "$DOCKER_TEST_ROOT/expected" "$docker_sources"
+        fi
+        assert_eq "Docker $docker_stage preserves modes, owners and inodes ($docker_layout)" \
+            "$docker_metadata_before" "$(stat -c '%n %a %u %g %i' "$docker_sources"/* 2>/dev/null || true)"
+        assert_eq "Docker $docker_stage cleans temporary backups ($docker_layout)" "" \
+            "$(compgen -G "$docker_sources/.docker-backup.*")"
+        rm -rf "$DOCKER_TEST_ROOT/expected"
+    done
+done
+
+assert_failure "Docker package failure after publication propagates" \
+    env PATH="$DOCKER_BIN:$MOCKBIN:$PATH" TMPDIR="$DOCKER_TEST_ROOT/tmp" \
+    SYSTEM_SETUP_TEST_MODE=1 SYSTEM_SETUP_OS_RELEASE="$TMP/os-release" SYSTEM_SETUP_ARCH=x86_64 \
+    SYSTEM_SETUP_HAS_SYSTEMD=0 SYSTEM_SETUP_ADD_DOCKER_GROUP=0 DOCKER_FAIL_STAGE=packages \
+    "$ROOT/debian/install-docker.sh"
+assert_eq "Docker keeps the verified replacement after publication" "$DOCKER_EXPECTED_SOURCE" \
+    "$(<"$DOCKER_TEST_ROOT/etc/apt/sources.list.d/docker.list")"
 
 : >"$CALL_LOG"
 NVIDIA_DAEMON_JSON="$TMP/daemon.json"
