@@ -75,6 +75,17 @@ assert_failure "nvtop rejects aarch64" validate_platform debian 12 bookworm aarc
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+NIX_INSTALLED_BIN="$TMP/nix-installed-bin"
+NIX_INSTALLED_HOME="$TMP/nix-installed-home"
+mkdir "$NIX_INSTALLED_BIN" "$NIX_INSTALLED_HOME"
+cat >"$NIX_INSTALLED_BIN/nix" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$NIX_INSTALLED_BIN/nix"
+assert_success "Nix already-installed path preserves successful exit status" \
+    env HOME="$NIX_INSTALLED_HOME" PATH="$NIX_INSTALLED_BIN:$PATH" "$ROOT/debian/install-nix.sh"
+
 THEME_FIXTURE="$TMP/theme-fixture/Gruvbox-GTK-Theme-fixture/themes"
 for source_dir in \
     assets/cinnamon assets/gnome-shell assets/gtk assets/gtk-2.0 assets/metacity-1 assets/xfwm4 \
@@ -156,6 +167,48 @@ assert_success "complete generated Gruvbox bundle is accepted" validate_gruvbox_
 for scale in Gruvbox-Dark Gruvbox-Dark-hdpi Gruvbox-Dark-xhdpi; do
     [[ -d "$THEME_BUILD/$scale" ]] || fail "generated bundle retains $scale"
 done
+
+APPEARANCE_BIN="$TMP/appearance-bin"
+APPEARANCE_HOME="$TMP/appearance-home"
+APPEARANCE_ARCHIVE_ROOT="$TMP/appearance-archive/Gruvbox-GTK-Theme-578cd220b5ff6e86b078a6111d26bb20ec8c733f"
+mkdir "$APPEARANCE_BIN" "$APPEARANCE_HOME"
+mkdir -p "$(dirname "$APPEARANCE_ARCHIVE_ROOT")"
+cp -a "$THEME_SOURCE" "$APPEARANCE_ARCHIVE_ROOT"
+tar -czf "$TMP/appearance-theme.tar.gz" -C "$(dirname "$APPEARANCE_ARCHIVE_ROOT")" "$(basename "$APPEARANCE_ARCHIVE_ROOT")"
+cat >"$APPEARANCE_BIN/apt" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+cat >"$APPEARANCE_BIN/sudo" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+cat >"$APPEARANCE_BIN/curl" <<'EOF'
+#!/bin/sh
+output=
+while [ "$#" -gt 0 ]; do
+    if [ "$1" = --output ]; then
+        output="$2"
+        shift 2
+    else
+        shift
+    fi
+done
+cp "$MOCK_THEME_ARCHIVE" "$output"
+EOF
+cat >"$APPEARANCE_BIN/sha256sum" <<'EOF'
+#!/bin/sh
+printf '%s  %s\n' f45da23a6c4123148cf8f78983e391a86c2e2ee1b7a80aa66790f148cb9619bd "$1"
+EOF
+cat >"$APPEARANCE_BIN/sassc" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$APPEARANCE_BIN"/*
+assert_success "appearance success preserves successful exit status" \
+    env HOME="$APPEARANCE_HOME" PATH="$APPEARANCE_BIN:$PATH" \
+    MOCK_THEME_ARCHIVE="$TMP/appearance-theme.tar.gz" THEME_INSTALL_ARGS="$TMP/appearance-install.args" \
+    "$ROOT/debian/setup-appearance.sh"
 
 UNMANAGED_THEMES="$TMP/unmanaged-themes"
 mkdir -p "$UNMANAGED_THEMES/user-theme"
