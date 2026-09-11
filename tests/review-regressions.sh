@@ -93,6 +93,8 @@ assert 'regular config still receives missing feature' ensure_nix_features "$TMP
 assert 'regular config retains flakes and adds nix-command' test "$(<"$TMP/regular.conf")" = 'experimental-features = flakes nix-command'
 
 # This stub detects the recursive dispatch condition without actually recursing.
+# Variables expand when the generated stub runs.
+# shellcheck disable=SC2016
 printf '%s\n' '#!/usr/bin/env bash' \
     '[[ ! -v TERMINAL ]] || exit 91' \
     'printf "%s\n" "$@" >"$CALL_LOG"' >"$TMP/bin/i3-sensible-terminal"
@@ -117,6 +119,8 @@ assert 'terminal check does not execute stub' test ! -s "$CALL_LOG"
 # All account and privilege commands are mocked; no host passwd or shells access.
 printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"$HOME/.nix-profile/bin/zsh"
 chmod +x "$HOME/.nix-profile/bin/zsh"
+# Variables expand when the generated stub runs.
+# shellcheck disable=SC2016
 printf '%s\n' '#!/usr/bin/env bash' \
     'case "${0##*/}" in' \
     'id) [[ "${MOCK_LOOKUP:-}" != id-fail ]] || exit 2; printf "fixture\n" ;;' \
