@@ -19,7 +19,23 @@ validate_single_repository_line() {
 }
 
 validate_nvidia_repository_file() {
-    validate_single_repository_line "$1" "deb https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /"
+    local repository_file="$1"
+    validate_single_repository_line "$repository_file" \
+        "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/\$(ARCH) /" || return 1
+    grep -Fxq \
+        "#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/experimental/deb/\$(ARCH) /" \
+        "$repository_file" || {
+        echo "[ERROR] Repository definition is missing the signed experimental entry" >&2
+        return 1
+    }
+}
+
+prepare_nvidia_repository_file() {
+    local downloaded="$1" staged="$2"
+    sed \
+        's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#' \
+        "$downloaded" >"$staged"
+    validate_nvidia_repository_file "$staged"
 }
 
 validate_tailscale_repository_file() {
