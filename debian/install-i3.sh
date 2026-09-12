@@ -52,8 +52,22 @@ cp "$CONFIG_DIR/polybar-launch.sh" "$HOME/.config/polybar/launch.sh"
 chmod +x "$HOME/.config/polybar/launch.sh"
 cp "$CONFIG_DIR/polybar-config.ini" "$HOME/.config/polybar/config.ini"
 
-# Install Rofi Config
-cp "$CONFIG_DIR/rofi-config.rasi" "$HOME/.config/rofi/config.rasi"
+# Install Rofi Config (Home Manager owns ~/.config/rofi/config.rasi when managed; never write through a symlink)
+ROFI_SOURCE="$CONFIG_DIR/rofi-config.rasi"
+ROFI_DEST="$HOME/.config/rofi/config.rasi"
+if [ -L "$ROFI_DEST" ]; then
+    echo "[SKIP] Rofi config is managed elsewhere ($ROFI_DEST is a symlink); leaving it untouched"
+elif [ -f "$ROFI_DEST" ] && cmp -s "$ROFI_SOURCE" "$ROFI_DEST"; then
+    echo "[INFO] Rofi config already up to date; skipping"
+elif [ -f "$ROFI_DEST" ]; then
+    echo "[INFO] Rofi config differs, backing up..."
+    mv "$ROFI_DEST" "$ROFI_DEST.bak.$(date +%s)"
+    cp "$ROFI_SOURCE" "$ROFI_DEST"
+    echo "[OK] Updated Rofi config (old backed up)"
+else
+    cp "$ROFI_SOURCE" "$ROFI_DEST"
+    echo "[OK] Created default Rofi config"
+fi
 
 # Install i3 Config
 # Only overwrite if it doesn't exist or force is requested (logic simplified for install script)

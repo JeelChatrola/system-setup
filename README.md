@@ -69,7 +69,7 @@ Don't edit files in `/etc` or `~/.config` directly if you want to save them.
 Edit them in **`configs/`** and re-run the installer (or copy them manually).
 
 *   **i3:** `configs/i3-config`
-*   **Rofi:** `configs/rofi-config.rasi`
+*   **Rofi:** `configs/rofi-config.rasi` (fallback only — `~/.config/rofi/config.rasi` is owned by Home Manager when managed; the installer never writes through a symlink).
 *   **Polybar configuration:** `configs/polybar-config.ini`
 *   **Polybar start script:** `configs/polybar-launch.sh`
 
