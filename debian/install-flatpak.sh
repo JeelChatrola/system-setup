@@ -59,20 +59,20 @@ if ! command -v flatpak &>/dev/null; then
   sudo apt install -y flatpak
 fi
 
-if ! flatpak remotes ${SCOPE} 2>/dev/null | grep -q '^flathub'; then
+if ! flatpak remotes "${SCOPE}" 2>/dev/null | grep -q '^flathub'; then
   echo "[*] Adding Flathub remote (${SCOPE#--})..."
-  sudo flatpak remote-add --if-not-exists ${SCOPE} flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  sudo flatpak remote-add --if-not-exists "${SCOPE}" flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 else
   echo "[OK] Flathub remote present (${SCOPE#--})"
 fi
 
 failed=0
 for app in "${APPS[@]}"; do
-  if flatpak list ${SCOPE} --app --columns=application 2>/dev/null | grep -qx "${app}"; then
+  if flatpak list "${SCOPE}" --app --columns=application 2>/dev/null | grep -qx "${app}"; then
     echo "[OK] Already installed: ${app}"
   else
     echo "[*] Installing ${app} (${SCOPE#--})..."
-    if ! sudo flatpak install -y ${SCOPE} flathub "${app}"; then
+    if ! sudo flatpak install -y "${SCOPE}" flathub "${app}"; then
       echo "[ERROR] Failed to install ${app}" >&2
       failed=$((failed + 1))
     fi
@@ -85,4 +85,4 @@ if [[ "${failed}" -gt 0 ]]; then
 fi
 
 echo "[OK] Flatpak converged (${SCOPE#--}): ${#APPS[@]} managed app(s)"
-flatpak list ${SCOPE} --app --columns=application,name,installation
+flatpak list "${SCOPE}" --app --columns=application,name,installation

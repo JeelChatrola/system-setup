@@ -27,11 +27,18 @@ if [[ ! -f "$OPEN_TERMINAL_SOURCE" ]]; then
     exit 1
 fi
 
+if ! "$OPEN_TERMINAL_SOURCE" --check >/dev/null 2>&1; then
+    echo "[ERROR] Keybindings require a usable terminal. Install Ghostty first or set TERMINAL." >&2
+    exit 1
+fi
+
 mkdir -p "$(dirname "$OPEN_TERMINAL_DESTINATION")"
-install -m 0755 "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION"
+terminal_tmp="$(mktemp "$(dirname "$OPEN_TERMINAL_DESTINATION")/.open-terminal.XXXXXX")"
+install -m 0755 "$OPEN_TERMINAL_SOURCE" "$terminal_tmp"
+mv "$terminal_tmp" "$OPEN_TERMINAL_DESTINATION"
 TERMINAL_CMD="$OPEN_TERMINAL_DESTINATION"
 
-echo "[OK] Installed open-terminal helper (ghostty > gnome-terminal)"
+echo "[OK] Installed open-terminal helper"
 
 setup_gnome_keybinding() {
     local custom_keybindings
