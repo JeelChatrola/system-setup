@@ -104,3 +104,11 @@ sudo tailscale set --advertise-exit-node
 ```
 
 Approve the advertised exit node in the [Tailscale admin console](https://login.tailscale.com/admin/machines). Keep the host firewall's forwarding policy restrictive; Tailscale manages only its own traffic.
+
+## Tests
+
+Run the plan-mode regression test (no writes, sudo, or network):
+
+```bash
+./tests/test-plan-forwarding.sh
+```

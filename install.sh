@@ -84,7 +84,7 @@ show_menu() {
 install_nix() {
     print_info "Installing Nix Package Manager..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-nix.sh"
+        bash "$SCRIPT_DIR/debian/install-nix.sh" "$@"
     else
         print_error "Nix installation not supported for $OS yet"
     fi
@@ -93,7 +93,7 @@ install_nix() {
 install_ghostty() {
     print_info "Installing Ghostty..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-ghostty.sh"
+        bash "$SCRIPT_DIR/debian/install-ghostty.sh" "$@"
     else
         print_error "Ghostty installation not supported for $OS yet"
     fi
@@ -102,7 +102,7 @@ install_ghostty() {
 install_nvtop() {
     print_info "Installing nvtop (AppImage)..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-nvtop.sh"
+        bash "$SCRIPT_DIR/debian/install-nvtop.sh" "$@"
     else
         print_error "nvtop installation not supported for $OS yet"
     fi
@@ -111,7 +111,7 @@ install_nvtop() {
 install_docker() {
     print_info "Installing Docker..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-docker.sh"
+        bash "$SCRIPT_DIR/debian/install-docker.sh" "$@"
     else
         print_error "Docker installation not supported for $OS yet"
     fi
@@ -120,7 +120,7 @@ install_docker() {
 install_tailscale() {
     print_info "Installing Tailscale..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-tailscale.sh"
+        bash "$SCRIPT_DIR/debian/install-tailscale.sh" "$@"
     else
         print_error "Tailscale installation not supported for $OS yet"
     fi
@@ -129,7 +129,7 @@ install_tailscale() {
 install_nvidia_toolkit() {
     print_info "Installing NVIDIA Container Toolkit..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-nvidia-toolkit.sh"
+        bash "$SCRIPT_DIR/debian/install-nvidia-toolkit.sh" "$@"
     else
         print_error "NVIDIA Toolkit installation not supported for $OS yet"
     fi
@@ -138,7 +138,7 @@ install_nvidia_toolkit() {
 install_launcher() {
     print_info "Installing Application Launcher..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-launcher.sh"
+        bash "$SCRIPT_DIR/debian/install-launcher.sh" "$@"
     else
         print_error "Launcher installation not supported for $OS yet"
     fi
@@ -147,7 +147,7 @@ install_launcher() {
 install_flatpak() {
     print_info "Installing Flatpak + managed GUI apps..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-flatpak.sh"
+        bash "$SCRIPT_DIR/debian/install-flatpak.sh" "$@"
     else
         print_error "Flatpak installation not supported for $OS yet"
     fi
@@ -156,7 +156,7 @@ install_flatpak() {
 setup_keybindings() {
     print_info "Setting up keybindings..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-keybindings.sh"
+        bash "$SCRIPT_DIR/debian/setup-keybindings.sh" "$@"
     else
         print_error "Keybinding setup not supported for $OS yet"
     fi
@@ -165,7 +165,7 @@ setup_keybindings() {
 setup_appearance() {
     print_info "Setting up appearance (Themes & Fonts)..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/setup-appearance.sh"
+        bash "$SCRIPT_DIR/debian/setup-appearance.sh" "$@"
     else
         print_error "Appearance setup not supported for $OS yet"
     fi
@@ -174,7 +174,7 @@ setup_appearance() {
 install_i3() {
     print_info "Installing i3 Window Manager..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-        bash "$SCRIPT_DIR/debian/install-i3.sh"
+        bash "$SCRIPT_DIR/debian/install-i3.sh" "$@"
     else
         print_error "i3 installation not supported for $OS yet"
     fi
@@ -182,23 +182,23 @@ install_i3() {
 
 install_essentials() {
     print_info "Installing Essentials..."
-    install_nix
-    install_docker
-    install_ghostty
-    install_launcher
+    install_nix "$@"
+    install_docker "$@"
+    install_ghostty "$@"
+    install_launcher "$@"
 }
 
 install_all() {
     print_info "Installing Everything..."
-    install_nix
-    install_docker
-    install_nvidia_toolkit
-    install_ghostty
-    install_launcher
-    install_i3
-    install_flatpak
-    setup_keybindings
-    setup_appearance
+    install_nix "$@"
+    install_docker "$@"
+    install_nvidia_toolkit "$@"
+    install_ghostty "$@"
+    install_launcher "$@"
+    install_i3 "$@"
+    install_flatpak "$@"
+    setup_keybindings "$@"
+    setup_appearance "$@"
 }
 
 # Main execution
@@ -213,48 +213,50 @@ fi
 
 # Check if running with arguments
 if [ $# -gt 0 ]; then
-    case "$1" in
+    cmd="$1"
+    shift
+    case "$cmd" in
         nix)
-            install_nix
+            install_nix "$@"
             ;;
         docker)
-            install_docker
+            install_docker "$@"
             ;;
         tailscale)
-            install_tailscale
+            install_tailscale "$@"
             ;;
         nvidia|nvidia-toolkit)
-            install_nvidia_toolkit
+            install_nvidia_toolkit "$@"
             ;;
         ghostty)
-            install_ghostty
+            install_ghostty "$@"
             ;;
         flatpak)
-            install_flatpak
+            install_flatpak "$@"
             ;;
         nvtop)
-            install_nvtop
+            install_nvtop "$@"
             ;;
         launcher)
-            install_launcher
+            install_launcher "$@"
             ;;
         i3)
-            install_i3
+            install_i3 "$@"
             ;;
         keybindings)
-            setup_keybindings
+            setup_keybindings "$@"
             ;;
         appearance)
-            setup_appearance
+            setup_appearance "$@"
             ;;
         essentials)
-            install_essentials
+            install_essentials "$@"
             ;;
         all)
-            install_all
+            install_all "$@"
             ;;
         *)
-            echo "Usage: $0 [OPTION]"
+            echo "Usage: $0 [OPTION] [--plan] [--apps FILE] [--system|--user]"
             echo ""
             echo "Options:"
             echo "  nix             Install Nix package manager"
