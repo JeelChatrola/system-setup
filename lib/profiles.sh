@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-COMPONENT_ORDER=(nix docker nvidia tailscale ghostty launcher i3 keybindings appearance default-shell nvtop)
+COMPONENT_ORDER=(nix docker nvidia tailscale ghostty launcher i3 keybindings appearance flatpak default-shell nvtop)
 
 is_component() {
     local candidate="$1" component
@@ -20,8 +20,8 @@ is_profile() {
 profile_components() {
     case "$1" in
         base) printf '%s\n' nix ;;
-        personal) printf '%s\n' nix ghostty launcher appearance ;;
-        workstation) printf '%s\n' nix docker ghostty launcher i3 keybindings appearance ;;
+        personal) printf '%s\n' nix ghostty launcher appearance flatpak ;;
+        workstation) printf '%s\n' nix docker ghostty launcher i3 keybindings appearance flatpak ;;
         server) printf '%s\n' nix docker ;;
         *) printf '[ERROR] Unknown profile: %s\n' "$1" >&2; return 1 ;;
     esac

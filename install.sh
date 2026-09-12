@@ -114,6 +114,7 @@ declare -A COMPONENT_SCRIPTS=(
     [i3]="debian/install-i3.sh"
     [keybindings]="debian/setup-keybindings.sh"
     [appearance]="debian/setup-appearance.sh"
+    [flatpak]="debian/install-flatpak.sh"
     [default-shell]="debian/setup-default-shell.sh"
     [nvtop]="debian/install-nvtop.sh"
 )

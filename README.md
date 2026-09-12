@@ -9,7 +9,7 @@ An explicit, rerunnable bootstrapper for supported Ubuntu and Debian hosts. It i
 | Ubuntu | 24.04 (noble) | `x86_64`, `aarch64` | All components except `nvtop` on `aarch64` |
 | Debian | 12 (bookworm) | `x86_64`, `aarch64` | All components except `nvtop` on `aarch64`; Ghostty must exist in configured Debian repositories |
 
-Other distributions, codenames, and releases fail before apply. `nvtop` uses an upstream x86_64 AppImage and is therefore x86_64-only. Desktop package availability is checked by each component after it refreshes APT metadata; an active GUI session is not required.
+Other distributions, codenames, and releases fail before apply. `nvtop` uses an upstream x86_64 AppImage and is therefore x86_64-only. `flatpak` converges a Chrome-only managed list and is likewise x86_64-only. Desktop package availability is checked by each component after it refreshes APT metadata; an active GUI session is not required.
 
 ## Commands
 
@@ -41,8 +41,8 @@ Components always run in canonical order, regardless of option order. Duplicate 
 | Profile | Exact expansion |
 | --- | --- |
 | `base` | `nix` |
-| `personal` | `nix ghostty launcher appearance` |
-| `workstation` | `nix docker ghostty launcher i3 keybindings appearance` |
+| `personal` | `nix ghostty launcher appearance flatpak` |
+| `workstation` | `nix docker ghostty launcher i3 keybindings appearance flatpak` |
 | `server` | `nix docker` |
 
 ## Components
@@ -54,10 +54,11 @@ Components always run in canonical order, regardless of option order. Duplicate 
 | `nvidia` | Installs NVIDIA Container Toolkit when needed, always converges the Docker runtime, and verifies Docker through sudo. Requires selected `docker` or a working existing privileged Docker installation. |
 | `tailscale` | Installs and enables `tailscaled`; enables IPv4/IPv6 forwarding for exit-node use. Authentication and route advertisement remain manual. |
 | `ghostty` | Installs Ghostty from APT. Ubuntu may use the validated noble PPA fallback; Debian never receives an Ubuntu PPA. |
-| `launcher` | Owns the Rofi package and `~/.config/rofi/config.rasi`. |
+| `launcher` | Owns the Rofi package and the fallback `~/.config/rofi/config.rasi`. When that path is managed elsewhere (symlink), the installer leaves it untouched; a differing real file is backed up before replacement. |
 | `i3` | Installs i3, Polybar, wallpaper tools, and managed i3/Polybar files. It does not own Rofi and standalone apply requires Rofi to exist before any mutation. |
 | `keybindings` | Installs the terminal helper and configures GNOME `Ctrl+Alt+T` when applicable. |
 | `appearance` | Installs Papirus icons and builds `Gruvbox-Dark`, `-hdpi`, and `-xhdpi` inside one marked, versioned bundle. Only `~/.themes/Gruvbox-Dark` is published; arbitrary or broken links and unmanaged files/directories at that path are left byte-identical and require manual removal. It does not install fonts. |
+| `flatpak` | Installs the Flatpak runtime, ensures the Flathub remote (system scope), and converges `configs/flatpak-apps.txt` (Chrome only; x86_64-only). Cursor/VSCode stay manual (not on Flathub). |
 | `default-shell` | Requires zsh from the separately deployed nix-config at `~/.nix-profile/bin/zsh`, registers it in `/etc/shells`, and changes the login shell after confirmation or `--yes`. It never mutates the Nix profile. |
 | `nvtop` | Installs and verifies the pinned upstream x86_64 AppImage in `~/.local/bin`. |
 

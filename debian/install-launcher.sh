@@ -44,9 +44,23 @@ else
 fi
 
 mkdir -p "$HOME/.config/rofi"
-rofi_tmp="$(mktemp "$HOME/.config/rofi/.config.XXXXXX")"
-install -m 0644 "$REPO_ROOT/configs/rofi-config.rasi" "$rofi_tmp"
-mv "$rofi_tmp" "$HOME/.config/rofi/config.rasi"
+# Home Manager owns ~/.config/rofi/config.rasi when managed; never write through a symlink.
+ROFI_SOURCE="$REPO_ROOT/configs/rofi-config.rasi"
+ROFI_DEST="$HOME/.config/rofi/config.rasi"
+if [ -L "$ROFI_DEST" ]; then
+    echo "[SKIP] Rofi config is managed elsewhere ($ROFI_DEST is a symlink); leaving it untouched"
+elif [ -f "$ROFI_DEST" ] && cmp -s "$ROFI_SOURCE" "$ROFI_DEST"; then
+    echo "[INFO] Rofi config already up to date; skipping"
+else
+    if [ -f "$ROFI_DEST" ]; then
+        echo "[INFO] Rofi config differs, backing up..."
+        mv "$ROFI_DEST" "$ROFI_DEST.bak.$(date +%s)"
+    fi
+    rofi_tmp="$(mktemp "$HOME/.config/rofi/.config.XXXXXX")"
+    install -m 0644 "$ROFI_SOURCE" "$rofi_tmp"
+    mv "$rofi_tmp" "$ROFI_DEST"
+    echo "[OK] Rofi config installed"
+fi
 
 # Create setup reminder script
 REMINDER_SCRIPT="$HOME/.local/bin/setup-launcher-hotkey"

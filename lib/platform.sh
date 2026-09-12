@@ -78,6 +78,10 @@ validate_platform() {
             echo "[ERROR] nvtop is supported only on x86_64 (detected $arch)" >&2
             return 1
         fi
+        if [[ "$component" == flatpak && "$arch" != x86_64 ]]; then
+            echo "[ERROR] flatpak is supported only on x86_64 (managed list is Chrome-only; detected $arch)" >&2
+            return 1
+        fi
     done
 }
 

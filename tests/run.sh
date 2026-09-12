@@ -49,11 +49,11 @@ source "$ROOT/lib/repository-data.sh"
 [[ ! -r "$ROOT/lib/nix-config.sh" ]] || source "$ROOT/lib/nix-config.sh"
 
 assert_eq "base profile" "nix" "$(resolve_components base)"
-assert_eq "personal profile" "nix ghostty launcher appearance" "$(resolve_components personal)"
-assert_eq "workstation profile order" "nix docker ghostty launcher i3 keybindings appearance" "$(resolve_components workstation)"
+assert_eq "personal profile" "nix ghostty launcher appearance flatpak" "$(resolve_components personal)"
+assert_eq "workstation profile order" "nix docker ghostty launcher i3 keybindings appearance flatpak" "$(resolve_components workstation)"
 assert_eq "server profile" "nix docker" "$(resolve_components server)"
 assert_eq "add/remove/deduplicate canonical order" \
-    "nix docker tailscale ghostty appearance nvtop" \
+    "nix docker tailscale ghostty appearance flatpak nvtop" \
     "$(resolve_components personal docker tailscale nvtop docker --remove launcher)"
 assert_failure "unknown profile" resolve_components nope
 assert_failure "unknown addition" resolve_components base nope
@@ -71,6 +71,7 @@ assert_failure "unsupported distribution" validate_platform fedora 42 unknown x8
 assert_failure "Ubuntu codename mismatch" validate_platform ubuntu 24.04 bookworm x86_64 nix
 assert_failure "Debian codename mismatch" validate_platform debian 12 noble x86_64 nix
 assert_failure "nvtop rejects aarch64" validate_platform debian 12 bookworm aarch64 nvtop
+assert_failure "flatpak rejects aarch64" validate_platform debian 12 bookworm aarch64 flatpak
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

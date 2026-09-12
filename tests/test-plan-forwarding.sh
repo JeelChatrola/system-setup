@@ -1,12 +1,11 @@
 #!/bin/bash
-# Regression test: top-level plan mode must not write, sudo, or touch the network.
+# Regression test: --plan mode must not write, sudo, or touch the network.
 #
-# Covers the --plan forwarding bug: `./install.sh flatpak --plan` used to drop
-# `--plan` when dispatching to debian/install-flatpak.sh, so a dry run could
-# perform sudo/network writes. The test runs the top-level dispatcher with an
-# isolated HOME and a stubbed PATH (fake sudo fails if called, fake flatpak
-# records calls) and asserts exit 0, zero stub invocations, plan-only output,
-# and no files created under the temp HOME.
+# The profile installer resolves and prints the selection, then exits before
+# any component script runs. This test runs the dispatcher with an isolated
+# HOME and a stubbed PATH (fake sudo fails if called, fake flatpak records
+# calls) and asserts exit 0, zero stub invocations, plan-only output, and no
+# files created under the temp HOME.
 #
 # Run: ./tests/test-plan-forwarding.sh
 
@@ -41,8 +40,8 @@ chmod +x "${STUB_BIN}/flatpak"
 
 export PLAN_TEST_CALLS_LOG="${CALLS_LOG}"
 
-echo "[*] Running: ./install.sh flatpak --plan (isolated HOME, stubbed PATH)"
-output="$(HOME="${FAKE_HOME}" PATH="${STUB_BIN}:${PATH}" bash "${REPO_ROOT}/install.sh" flatpak --plan 2>&1)"
+echo "[*] Running: ./install.sh --component flatpak --plan (isolated HOME, stubbed PATH)"
+output="$(HOME="${FAKE_HOME}" PATH="${STUB_BIN}:${PATH}" bash "${REPO_ROOT}/install.sh" --component flatpak --plan 2>&1)"
 status=$?
 echo "${output}"
 
@@ -52,7 +51,7 @@ fail() {
 }
 
 [[ "${status}" -eq 0 ]] || fail "expected exit 0, got ${status}"
-echo "${output}" | grep -q '\[PLAN\]' || fail "expected plan-only output ([PLAN]), got none"
+echo "${output}" | grep -q 'Components: flatpak' || fail "expected plan component list, got none"
 [[ ! -s "${CALLS_LOG}" ]] || fail "stub invoked during --plan: $(cat "${CALLS_LOG}")"
 [[ -z "$(ls -A "${FAKE_HOME}")" ]] || fail "files created under temp HOME: $(ls -A "${FAKE_HOME}")"
 
