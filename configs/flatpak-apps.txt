@@ -1,0 +1,7 @@
+# Managed Flatpak apps (one application ID per line, comments allowed).
+# System-setup converges these with debian/install-flatpak.sh (default: --system).
+# Ground reality 2026-09-12 (flatpak list --app): all four are system installs.
+app.zen_browser.zen
+com.brave.Browser
+com.google.Chrome
+org.videolan.VLC
