@@ -262,7 +262,7 @@ if [ $# -gt 0 ]; then
             echo "  tailscale       Install Tailscale and exit-node prerequisites"
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  ghostty         Install Ghostty terminal"
-            echo "  flatpak         Install Flatpak + managed GUI apps (see docs/FLATPAK_PLAN.md)"
+            echo "  flatpak         Install Flatpak + managed GUI apps (configs/flatpak-apps.txt)"
             echo "  nvtop           Install nvtop GPU monitor (AppImage)"
             echo "  launcher        Install Rofi launcher"
             echo "  i3              Install i3 Window Manager"

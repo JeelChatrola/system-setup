@@ -44,7 +44,7 @@ if [[ "${PLAN}" == true ]]; then
   for app in "${APPS[@]}"; do
     echo "[PLAN] ensure installed: ${app}"
   done
-  echo "[PLAN] Cursor/VSCode stay manual (not on Flathub); see docs/FLATPAK_PLAN.md"
+  echo "[PLAN] Cursor/VSCode stay manual (not on Flathub)."
   exit 0
 fi
 

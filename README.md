@@ -25,7 +25,7 @@ GUI apps live here via Flatpak — not in Nix (you are not on NixOS).
 **3. Choose an option:**
 *   **Option 10 (Install Everything):** Sets up Nix, Docker, Ghostty, i3, Rofi, Flatpak GUI apps, and Appearance.
 *   **Option 6 (i3 Window Manager):** Installs i3 and its window-manager utilities. Configure Rofi and Polybar with their separate files below.
-*   **Option 12 (Flatpak):** Installs the Flatpak runtime, ensures the Flathub remote (system scope), and converges the managed apps in `configs/flatpak-apps.txt`. Dry-run with `./debian/install-flatpak.sh --plan`. See `docs/FLATPAK_PLAN.md`.
+*   **Option 12 (Flatpak):** Installs the Flatpak runtime, ensures the Flathub remote (system scope), and converges the managed apps in `configs/flatpak-apps.txt` (Chrome only; Cursor/VSCode stay manual). Dry-run with `./debian/install-flatpak.sh --plan`.
 
 ---
 
