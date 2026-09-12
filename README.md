@@ -3,6 +3,16 @@
 A lightweight, reliable bootstrapper for Debian/Ubuntu systems.
 It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfiles and get to work.
 
+## Repository ownership
+
+| Repository | Responsibilities |
+|---|---|
+| `system-setup` (this repo) | Host bootstrap and system services: apt packages, Docker, Nix installer, Flatpak runtime + Flathub + system-wide GUI apps, desktop integration |
+| `nix-config` | Home Manager CLI tools, shell/editor configuration, dotfiles (Nix is for CLI/dotfiles only) |
+| `ai-stack` | All AI clients (Codex, OpenCode, Agent Browser, Hermes), generated config, optional local Docker services |
+
+GUI apps live here via Flatpak — not in Nix (you are not on NixOS).
+
 ## 🚀 Quick Start (Fresh Install)
 
 **1. Clone the repo:**
@@ -13,8 +23,9 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 ```
 
 **3. Choose an option:**
-*   **Option 10 (Install Everything):** Sets up Nix, Docker, Ghostty, i3, Rofi, and Appearance.
+*   **Option 10 (Install Everything):** Sets up Nix, Docker, Ghostty, i3, Rofi, Flatpak GUI apps, and Appearance.
 *   **Option 6 (i3 Window Manager):** Installs i3 and its window-manager utilities. Configure Rofi and Polybar with their separate files below.
+*   **Option 12 (Flatpak):** Installs the Flatpak runtime, ensures the Flathub remote (system scope), and converges the managed apps in `configs/flatpak-apps.txt` (Chrome only; Cursor/VSCode stay manual). Dry-run with `./debian/install-flatpak.sh --plan`.
 
 ---
 
@@ -33,6 +44,7 @@ It installs the "core" environment (i3, Docker, Nix) so you can pull your dotfil
 *   **Bar:** Polybar (Beautiful status bar)
 *   **Wallpaper:** Nitrogen (Wallpaper manager)
 *   **Appearance:** Installs the Gruvbox GTK theme, Papirus icons, and JetBrainsMono Nerd Font files. Select them in your desktop environment after installation.
+*   **GUI apps (Flatpak):** Chrome via Flathub (system scope, `configs/flatpak-apps.txt`). Run `./install.sh flatpak`. Zen/Brave/VLC are no longer managed; Cursor/VSCode stay manual (not on Flathub).
 
 ---
 
@@ -69,15 +81,16 @@ Edit them in **`configs/`** and re-run the installer (or copy them manually).
 2.  **Run this repo:** `./install.sh` -> Install Everything.
 3.  **Reboot/Login:** Select `i3` session at login (if graphical) or just log in.
 4. **Next Steps** (separate repos — clone yourself after git/SSH is ready):
-    *   Clone your Home Manager repo and private ai-stack repo
-    *   Deploy dotfiles from your nix-config checkout
-    *   Install GUI apps manually or via Flatpak (Chrome, Zen, Cursor)
+     *   Clone your Home Manager repo and private ai-stack repo
+     *   Deploy dotfiles from your nix-config checkout (`./deploy.sh --host main-workstation`)
+     *   Deploy AI clients from your ai-stack checkout (`bin/ai-stack deploy`)
+     *   GUI apps are managed here via Flatpak (`./install.sh flatpak`); Cursor/VSCode stay manual
 
 ## ❌ What is NOT included?
-*   **Browsers:** Install Chrome/Zen manually (they update too often).
-*   **Editors:** Install VSCode/Cursor manually.
-*   **GUI apps:** Install via apt/PPA/Flatpak in system-setup — not Nix (you are not on NixOS).
+*   **Editors:** Install VSCode/Cursor manually (not on Flathub).
+*   **GUI apps via Nix:** Install via Flatpak in system-setup — not Nix (you are not on NixOS).
 *   **User Dotfiles:** Manage your `.zshrc`, `.gitconfig` via Home Manager (Nix is for CLI/dotfiles only).
+*   **AI clients/services:** Owned by ai-stack, not this repo.
 
 ## Tailscale Exit Node
 

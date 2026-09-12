@@ -64,6 +64,7 @@ show_menu() {
     echo "      4)  Ghostty (Terminal Emulator)"
     echo "      5)  Application Launcher (Rofi)"
     echo "      6)  i3 Window Manager"
+    echo "      12) Flatpak + managed GUI apps (Flathub, system scope)"
     echo ""
     echo "  [*] Configuration:"
     echo "      7)  Setup Keybindings (Ctrl+Alt+T for terminal)"
@@ -77,7 +78,7 @@ show_menu() {
     echo ""
     echo "╚══════════════════════════════════════════════════════════╝"
     echo ""
-    read -p "Enter your choice [0-11]: " choice
+    read -p "Enter your choice [0-12]: " choice
 }
 
 install_nix() {
@@ -143,6 +144,15 @@ install_launcher() {
     fi
 }
 
+install_flatpak() {
+    print_info "Installing Flatpak + managed GUI apps..."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        bash "$SCRIPT_DIR/debian/install-flatpak.sh"
+    else
+        print_error "Flatpak installation not supported for $OS yet"
+    fi
+}
+
 setup_keybindings() {
     print_info "Setting up keybindings..."
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
@@ -186,6 +196,7 @@ install_all() {
     install_ghostty
     install_launcher
     install_i3
+    install_flatpak
     setup_keybindings
     setup_appearance
 }
@@ -218,6 +229,9 @@ if [ $# -gt 0 ]; then
         ghostty)
             install_ghostty
             ;;
+        flatpak)
+            install_flatpak
+            ;;
         nvtop)
             install_nvtop
             ;;
@@ -248,6 +262,7 @@ if [ $# -gt 0 ]; then
             echo "  tailscale       Install Tailscale and exit-node prerequisites"
             echo "  nvidia          Install NVIDIA Container Toolkit"
             echo "  ghostty         Install Ghostty terminal"
+            echo "  flatpak         Install Flatpak + managed GUI apps (configs/flatpak-apps.txt)"
             echo "  nvtop           Install nvtop GPU monitor (AppImage)"
             echo "  launcher        Install Rofi launcher"
             echo "  i3              Install i3 Window Manager"
@@ -283,6 +298,9 @@ else
                 ;;
             6)
                 install_i3
+                ;;
+            12)
+                install_flatpak
                 ;;
             7)
                 setup_keybindings
