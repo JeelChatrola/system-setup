@@ -1,7 +1,5 @@
 # Managed Flatpak apps (one application ID per line, comments allowed).
 # System-setup converges these with debian/install-flatpak.sh (default: --system).
-# Ground reality 2026-09-12 (flatpak list --app): all four are system installs.
-app.zen_browser.zen
-com.brave.Browser
+# 2026-09-12: trimmed to Chrome only per owner request; Zen/Brave/VLC are no
+# longer managed (uninstall manually if desired, e.g. flatpak uninstall --system APP_ID).
 com.google.Chrome
-org.videolan.VLC

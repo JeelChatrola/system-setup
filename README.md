@@ -44,7 +44,7 @@ GUI apps live here via Flatpak — not in Nix (you are not on NixOS).
 *   **Bar:** Polybar (Beautiful status bar)
 *   **Wallpaper:** Nitrogen (Wallpaper manager)
 *   **Appearance:** Installs the Gruvbox GTK theme, Papirus icons, and JetBrainsMono Nerd Font files. Select them in your desktop environment after installation.
-*   **GUI apps (Flatpak):** Zen, Brave, Chrome, VLC via Flathub (system scope, `configs/flatpak-apps.txt`). Run `./install.sh flatpak`. Cursor/VSCode stay manual (not on Flathub).
+*   **GUI apps (Flatpak):** Chrome via Flathub (system scope, `configs/flatpak-apps.txt`). Run `./install.sh flatpak`. Zen/Brave/VLC are no longer managed; Cursor/VSCode stay manual (not on Flathub).
 
 ---
 

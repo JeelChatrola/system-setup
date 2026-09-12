@@ -3,11 +3,14 @@
 ## Ground reality (2026-09-12)
 
 - Host has Flatpak 1.14.6 with the `flathub` remote (`system` scope).
-- `flatpak list --app` shows 4 system installs (all `--system`, none `--user`):
+- `flatpak list --app` showed 4 system installs (all `--system`, none `--user`):
   - `app.zen_browser.zen` (Zen 1.22b)
   - `com.brave.Browser` (Brave 1.95.101)
   - `com.google.Chrome` (153.0.8010.36-1)
   - `org.videolan.VLC` (3.0.23)
+- Owner decision: manage **Chrome only** going forward. Zen/Brave/VLC stay
+  installed but unmanaged; remove manually when ready, e.g.
+  `sudo flatpak uninstall --system app.zen_browser.zen`.
 - `main` README told users to install Chrome/Zen/Cursor manually or via Flatpak,
   but `install.sh` had no Flatpak path. This stub closes that gap.
 - No Flatpak component exists yet on `main` or on `impl/modular-machines` (PR #5);
@@ -31,7 +34,7 @@ Flatpak never installs AI clients, Nix packages, or Home Manager state.
     (`--system` default, matching current workstation), then installs each ID in
     `configs/flatpak-apps.txt` idempotently (`flatpak list` check first).
   - Fails non-zero when the apps file is missing or any install fails.
-- `configs/flatpak-apps.txt`: the 4 observed system apps, one ID per line.
+- `configs/flatpak-apps.txt`: Chrome only (`com.google.Chrome`).
 - `install.sh`: new `flatpak` CLI target + menu entry + inclusion in Install Everything.
   `main` has no global `--plan`; the script's own `--plan` covers dry-run.
   PR #5 integration (profile component + global `--plan`) is future work.
