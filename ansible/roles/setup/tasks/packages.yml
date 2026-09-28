@@ -1,0 +1,17 @@
+---
+- name: Install Debian packages
+  ansible.builtin.apt:
+    name: "{{ setup_package_names }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: setup_backend == 'Debian'
+
+# Arch must already be fully updated (omarchy-update on Omarchy).
+# Refreshing only the database here would create an unsupported partial upgrade.
+- name: Install Arch packages from the existing synchronized database
+  community.general.pacman:
+    name: "{{ setup_package_names }}"
+    state: present
+    update_cache: false
+  when: setup_backend == 'Archlinux'

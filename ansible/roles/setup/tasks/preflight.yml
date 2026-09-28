@@ -1,0 +1,83 @@
+---
+- name: Validate selection and supported platform before changes
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.system == 'Linux'
+      - ansible_facts.architecture in ['x86_64', 'aarch64']
+      - ansible_facts.os_family != 'Archlinux' or ansible_facts.architecture == 'x86_64'
+      - >-
+        (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '24.04') or
+        (ansible_facts.distribution == 'Debian' and ansible_facts.distribution_major_version in ['12', '13']) or
+        ansible_facts.os_family == 'Archlinux'
+      - setup_profile in setup_profiles or (setup_profile == '' and setup_components is defined)
+      - setup_components is not defined or setup_profile == ''
+      - setup_add is sequence and setup_add is not string
+      - setup_remove is sequence and setup_remove is not string
+      - setup_components is not defined or (setup_components is sequence and setup_components is not string)
+      - setup_components is not defined or (setup_add | length == 0 and setup_remove | length == 0)
+      - setup_profile != 'omarchy' or ansible_facts.os_family == 'Archlinux'
+    fail_msg: Use a supported Linux host and select a profile OR an explicit component list.
+
+- name: Resolve component selection
+  ansible.builtin.set_fact:
+    setup_requested: "{{ setup_components | default(setup_profiles[setup_profile] | default([]) + setup_add) }}"
+
+- name: Reject unknown components
+  ansible.builtin.assert:
+    that:
+      - (setup_requested + setup_remove) | difference(setup_component_order) | length == 0
+      - setup_requested | difference(setup_remove) | length > 0
+
+- name: Put components in dependency order
+  ansible.builtin.set_fact:
+    setup_selected: "{{ setup_component_order | select('in', setup_requested) | reject('in', setup_remove) | list }}"
+    setup_backend: "{{ 'Archlinux' if ansible_facts.os_family == 'Archlinux' else 'Debian' }}"
+
+- name: Look up target account
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ setup_user }}"
+
+- name: Resolve target home from account database
+  ansible.builtin.set_fact:
+    setup_home: "{{ ansible_facts.getent_passwd[setup_user][4] }}"
+    setup_gid: "{{ ansible_facts.getent_passwd[setup_user][2] }}"
+
+- name: Detect Omarchy in the target account
+  ansible.builtin.stat:
+    path: "{{ setup_home }}/.local/share/omarchy"
+  register: setup_omarchy_path
+
+- name: Protect platform and user configuration boundaries
+  ansible.builtin.assert:
+    that:
+      - setup_user != 'root' or setup_selected | intersect(setup_user_components) | length == 0
+      - not (setup_docker_group | bool) or setup_user != 'root'
+      - >-
+        not (setup_profile == 'omarchy' or setup_omarchy_path.stat.exists) or
+        setup_selected | intersect(setup_desktop_components) | length == 0
+      - "'flatpak' not in setup_selected or ansible_facts.architecture == 'x86_64' or 'com.google.Chrome' not in setup_flatpak_apps"
+      - "'nvtop' not in setup_selected or setup_backend == 'Archlinux' or ansible_facts.architecture == 'x86_64'"
+    fail_msg: >-
+      User components need a non-root setup_user. Omarchy owns its desktop and login shell;
+      use its profile for system capabilities. Chrome and the Debian nvtop AppImage require x86_64.
+
+- name: Require systemd when managing services
+  ansible.builtin.assert:
+    that: ansible_facts.service_mgr == 'systemd'
+    fail_msg: Containers may use setup_manage_services=false for package/configuration tests only.
+  when:
+    - setup_manage_services | bool
+    - setup_selected | intersect(['docker', 'nvidia', 'tailscale', 'nix']) | length > 0
+
+- name: Load distro package mappings
+  ansible.builtin.include_vars: "{{ setup_backend }}.yml"
+
+- name: Show resolved configuration
+  ansible.builtin.debug:
+    msg:
+      distribution: "{{ ansible_facts.distribution }}"
+      architecture: "{{ ansible_facts.architecture }}"
+      user: "{{ setup_user }}"
+      components: "{{ setup_selected }}"
+      services: "{{ setup_manage_services | bool }}"

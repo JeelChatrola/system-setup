@@ -1,0 +1,10 @@
+---
+- name: Validate and resolve configuration
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [always]
+
+- name: Apply components
+  ansible.builtin.include_tasks: "{{ setup_component }}.yml"
+  loop: "{{ setup_selected }}"
+  loop_control:
+    loop_var: setup_component

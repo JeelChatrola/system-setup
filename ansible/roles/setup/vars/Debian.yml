@@ -1,0 +1,13 @@
+---
+setup_packages:
+  prerequisites: [ca-certificates, gnupg, python3-debian]
+  docker: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+  nvidia: [nvidia-container-toolkit]
+  tailscale: [tailscale]
+  nix: [ca-certificates, xz-utils]
+  ghostty: [ghostty]
+  launcher: [rofi]
+  i3: [i3-wm, i3status, i3lock, suckless-tools, feh, picom, polybar, zenity, fonts-font-awesome]
+  appearance: [ca-certificates, papirus-icon-theme, sassc]
+  flatpak: [flatpak]
+  gnome: [dconf-cli, dconf-service, dbus-x11, python3-psutil]

@@ -1,0 +1,6 @@
+---
+- name: Configure Linux hosts
+  hosts: all
+  become: true
+  roles:
+    - setup

@@ -1,0 +1,42 @@
+---
+- name: Verify headless desktop configuration
+  hosts: all
+  tasks:
+    - name: Check i3 configuration syntax
+      become: true
+      become_user: tester
+      ansible.builtin.command: i3 -C -c /home/tester/.config/i3/config
+      changed_when: false
+
+    - name: Inspect completed Gruvbox bundle
+      ansible.builtin.stat:
+        path: /home/tester/.themes/Gruvbox-Dark/gtk-3.0/gtk.css
+      register: theme
+
+    - name: Read preserved wallpaper
+      ansible.builtin.slurp:
+        src: /home/tester/Pictures/bg.jpg
+      register: wallpaper
+
+    - name: Require complete theme and preserved wallpaper
+      ansible.builtin.assert:
+        that:
+          - theme.stat.size > 0
+          - wallpaper.content | b64decode == 'user wallpaper fixture'
+
+    - name: Read preserved GNOME shortcut list
+      become: true
+      become_user: tester
+      community.general.dconf:
+        key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+        state: read
+      register: shortcuts
+
+    - name: Verify existing and new shortcuts coexist without duplicates
+      ansible.builtin.assert:
+        that:
+          - "'/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-existing/' in paths"
+          - "'/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-terminal/' in paths"
+          - paths | length == 2
+      vars:
+        paths: "{{ shortcuts.value | from_yaml }}"

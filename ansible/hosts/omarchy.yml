@@ -1,0 +1,4 @@
+---
+setup_profile: omarchy
+# Omarchy supplies Docker and its desktop. Select additional capabilities explicitly.
+setup_add: [tailscale]

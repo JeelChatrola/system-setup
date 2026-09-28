@@ -1,0 +1,40 @@
+---
+# Select a profile, or supply an explicit list in setup_components.
+setup_profile: ''
+setup_add: []
+setup_remove: []
+setup_user: "{{ ansible_facts.env.SUDO_USER | default(ansible_facts.user_id, true) }}"
+setup_manage_services: true
+setup_docker_group: false
+setup_tailscale_forwarding: true
+setup_flatpak_apps: [com.google.Chrome]
+setup_gnome_keybindings: false
+
+setup_profiles:
+  base: [nix]
+  personal: [nix, ghostty, launcher, appearance, flatpak]
+  workstation: [nix, docker, ghostty, launcher, i3, keybindings, appearance, flatpak]
+  server: [nix, docker]
+  omarchy: [nix]
+setup_component_order:
+  - nix
+  - docker
+  - nvidia
+  - tailscale
+  - ghostty
+  - launcher
+  - i3
+  - keybindings
+  - appearance
+  - flatpak
+  - default-shell
+  - nvtop
+setup_desktop_components: [ghostty, launcher, i3, keybindings, appearance, flatpak, default-shell]
+setup_user_components: [nix, launcher, i3, keybindings, appearance, default-shell, nvtop]
+
+setup_nix_version: 3.21.5
+setup_nix_checksums:
+  x86_64: ee9c560d6f093baf7a8b342d8a00e9f8b47dd4a6367f3f523482ee96897c4179
+  aarch64: 9f56a034a7b0fe1bb83117a0326e1b38cc30dc14cdc311abb0637db332e1826f
+setup_gruvbox_commit: 578cd220b5ff6e86b078a6111d26bb20ec8c733f
+setup_gruvbox_checksum: f45da23a6c4123148cf8f78983e391a86c2e2ee1b7a80aa66790f148cb9619bd

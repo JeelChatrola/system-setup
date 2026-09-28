@@ -1,0 +1,62 @@
+---
+- name: Configure Tailscale repository on Debian family
+  ansible.builtin.include_tasks: repository.yml
+  vars:
+    setup_repository:
+      name: tailscale
+      uri: "https://pkgs.tailscale.com/stable/{{ ansible_facts.distribution | lower }}"
+      suites: "{{ ansible_facts.distribution_release }}"
+      components: [main]
+      key_url: "https://pkgs.tailscale.com/stable/{{ ansible_facts.distribution | lower }}/{{ ansible_facts.distribution_release }}.noarmor.gpg"
+      key_extension: gpg
+      fingerprint: 2596A99EAAB33821893C0A79458CA832957F5868
+  when: setup_backend == 'Debian'
+
+- name: Install Tailscale
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.tailscale }}"
+
+- name: Enable Tailscale daemon
+  ansible.builtin.systemd_service:
+    name: tailscaled
+    enabled: true
+    state: started
+  when: setup_manage_services | bool
+
+- name: Configure forwarding for exit-node use
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-tailscale.conf
+    content: |
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+    mode: '0644'
+  when: setup_tailscale_forwarding | bool
+
+- name: Read live forwarding settings
+  ansible.builtin.command:
+    argv: [sysctl, -n, "{{ item }}"]
+  loop: [net.ipv4.ip_forward, net.ipv6.conf.all.forwarding]
+  register: setup_forwarding
+  changed_when: false
+  check_mode: false
+  when:
+    - setup_tailscale_forwarding | bool
+    - setup_manage_services | bool
+
+- name: Repair forwarding settings on live hosts
+  ansible.builtin.command:
+    argv: [sysctl, -w, "{{ item.item }}=1"]
+  loop: "{{ setup_forwarding.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  changed_when: true
+  when:
+    - setup_tailscale_forwarding | bool
+    - setup_manage_services | bool
+    - not ansible_check_mode
+    - item.stdout != '1'
+
+- name: Report manual authentication step
+  ansible.builtin.debug:
+    msg: Authenticate with sudo tailscale up; advertise and approve exit-node routes separately if wanted.

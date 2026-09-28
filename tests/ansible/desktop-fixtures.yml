@@ -1,0 +1,29 @@
+---
+- name: Provide a terminal and preserve an existing wallpaper for headless tests
+  hosts: all
+  tasks:
+    - name: Install a terminal for shortcut dependency checks
+      ansible.builtin.package:
+        name: "{{ ['xterm', 'dconf', 'dbus', 'python-psutil'] if ansible_facts.os_family == 'Archlinux' else ['xterm', 'dconf-cli', 'dconf-service', 'dbus-x11', 'python3-psutil'] }}"
+        state: present
+
+    - name: Seed an unrelated GNOME shortcut
+      become: true
+      become_user: tester
+      community.general.dconf:
+        key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+        value: "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-existing/']"
+
+    - name: Create user Pictures directory
+      ansible.builtin.file:
+        path: /home/tester/Pictures
+        state: directory
+        owner: tester
+        mode: '0755'
+
+    - name: Seed wallpaper to verify preservation
+      ansible.builtin.copy:
+        dest: /home/tester/Pictures/bg.jpg
+        content: user wallpaper fixture
+        owner: tester
+        mode: '0644'

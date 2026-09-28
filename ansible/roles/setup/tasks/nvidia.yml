@@ -1,0 +1,58 @@
+---
+- name: Require Docker before NVIDIA runtime configuration
+  ansible.builtin.command: docker --version
+  changed_when: false
+  check_mode: false
+  when: not ansible_check_mode or 'docker' not in setup_selected
+
+- name: Configure NVIDIA repository on Debian family
+  ansible.builtin.include_tasks: repository.yml
+  vars:
+    setup_repository:
+      name: nvidia-container-toolkit
+      uri: "https://nvidia.github.io/libnvidia-container/stable/deb/{{ 'amd64' if ansible_facts.architecture == 'x86_64' else 'arm64' }}"
+      suites: [/]
+      key_url: https://nvidia.github.io/libnvidia-container/gpgkey
+      fingerprint: C95B321B61E88C1809C4F759DDCAE044F796ECB0
+  when: setup_backend == 'Debian'
+
+- name: Install NVIDIA Container Toolkit
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.nvidia }}"
+
+- name: Ensure Docker configuration directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Inspect existing Docker configuration
+  ansible.builtin.stat:
+    path: /etc/docker/daemon.json
+  register: setup_daemon_file
+
+- name: Read existing Docker configuration
+  ansible.builtin.slurp:
+    src: /etc/docker/daemon.json
+  register: setup_daemon_config
+  when: setup_daemon_file.stat.exists
+
+- name: Merge NVIDIA runtime while preserving other Docker settings
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: >-
+      {{ (setup_daemon_config.content | default('e30=') | b64decode | from_json)
+         | combine({'runtimes': {'nvidia': {'path': 'nvidia-container-runtime', 'runtimeArgs': []}}}, recursive=true)
+         | to_nice_json }}
+    mode: '0644'
+    backup: true
+  notify: Restart Docker
+
+- name: Apply runtime changes before verification
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify Docker after runtime configuration
+  ansible.builtin.command: docker info
+  changed_when: false
+  when: setup_manage_services | bool and not ansible_check_mode

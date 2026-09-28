@@ -1,0 +1,13 @@
+---
+setup_packages:
+  prerequisites: [ca-certificates, gnupg]
+  docker: [docker, docker-buildx, docker-compose]
+  nvidia: [nvidia-container-toolkit]
+  tailscale: [tailscale]
+  nix: [ca-certificates, xz]
+  ghostty: [ghostty]
+  launcher: [rofi]
+  i3: [i3-wm, i3status, i3lock, dmenu, feh, picom, polybar, zenity, ttf-font-awesome]
+  appearance: [ca-certificates, papirus-icon-theme, sassc]
+  flatpak: [flatpak]
+  gnome: [dconf, dbus, python-psutil]

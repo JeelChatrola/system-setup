@@ -1,0 +1,87 @@
+---
+- name: Inspect legacy repository list
+  ansible.builtin.stat:
+    path: "/etc/apt/sources.list.d/{{ setup_repository.name }}.list"
+  register: setup_legacy_source
+
+- name: Back up legacy repository list before migration
+  ansible.builtin.copy:
+    src: "/etc/apt/sources.list.d/{{ setup_repository.name }}.list"
+    dest: "/etc/apt/sources.list.d/{{ setup_repository.name }}.list.system-setup-backup"
+    remote_src: true
+    force: false
+    mode: '0644'
+  when: setup_legacy_source.stat.exists
+
+- name: Remove legacy list to avoid conflicting Signed-By settings
+  ansible.builtin.file:
+    path: "/etc/apt/sources.list.d/{{ setup_repository.name }}.list"
+    state: absent
+
+- name: Install repository prerequisites
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.prerequisites }}"
+
+- name: Create repository key directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/apt/keyrings
+    - /var/cache/system-setup
+
+- name: Download repository signing key to staging
+  ansible.builtin.get_url:
+    url: "{{ setup_repository.key_url }}"
+    dest: "/var/cache/system-setup/{{ setup_repository.name }}.{{ setup_repository.key_extension | default('asc') }}"
+    mode: '0644'
+  register: setup_key_download
+
+- name: Inspect repository signing key
+  ansible.builtin.command:
+    argv:
+      - gpg
+      - --batch
+      - --show-keys
+      - --with-colons
+      - "/var/cache/system-setup/{{ setup_repository.name }}.{{ setup_repository.key_extension | default('asc') }}"
+  register: setup_key_info
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify pinned primary key fingerprint
+  ansible.builtin.assert:
+    that:
+      - setup_key_info.stdout_lines | select('match', '^pub:') | list | length == 1
+      - (setup_key_info.stdout_lines | select('match', '^fpr:') | first).split(':')[9] == setup_repository.fingerprint
+  when: not ansible_check_mode
+
+- name: Publish verified repository key
+  ansible.builtin.copy:
+    src: "/var/cache/system-setup/{{ setup_repository.name }}.{{ setup_repository.key_extension | default('asc') }}"
+    dest: "/etc/apt/keyrings/{{ setup_repository.name }}.{{ setup_repository.key_extension | default('asc') }}"
+    remote_src: true
+    mode: '0644'
+  when: not ansible_check_mode
+
+- name: Configure signed repository
+  ansible.builtin.deb822_repository:
+    name: "{{ setup_repository.name }}"
+    types: [deb]
+    uris: "{{ setup_repository.uri }}"
+    suites: "{{ setup_repository.suites }}"
+    components: "{{ setup_repository.components | default(omit) }}"
+    architectures: "{{ 'amd64' if ansible_facts.architecture == 'x86_64' else 'arm64' }}"
+    signed_by: "/etc/apt/keyrings/{{ setup_repository.name }}.{{ setup_repository.key_extension | default('asc') }}"
+    state: present
+  register: setup_repository_result
+  when: not ansible_check_mode
+
+- name: Refresh APT after repository changes
+  ansible.builtin.apt:
+    update_cache: true
+  when:
+    - not ansible_check_mode
+    - setup_repository_result.changed

@@ -1,0 +1,123 @@
+---
+- name: Define versioned theme paths
+  ansible.builtin.set_fact:
+    setup_theme_bundle: "{{ setup_home }}/.themes/.system-setup-gruvbox-{{ setup_gruvbox_commit }}"
+    setup_theme_source: "/var/cache/system-setup/Gruvbox-GTK-Theme-{{ setup_gruvbox_commit }}"
+
+- name: Inspect stable theme path
+  ansible.builtin.stat:
+    path: "{{ setup_home }}/.themes/Gruvbox-Dark"
+    follow: false
+  register: setup_theme_link
+
+- name: Refuse to overwrite an unmanaged theme
+  ansible.builtin.assert:
+    that: >-
+      not setup_theme_link.stat.exists or
+      (setup_theme_link.stat.islnk | default(false) and
+       setup_theme_link.stat.lnk_source == setup_theme_bundle + '/Gruvbox-Dark')
+    fail_msg: Move the existing Gruvbox-Dark path aside before migrating appearance to Ansible.
+
+- name: Install theme build dependencies and icons
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.appearance }}"
+
+- name: Create theme download cache
+  ansible.builtin.file:
+    path: /var/cache/system-setup
+    state: directory
+    mode: '0755'
+
+- name: Download checksum-pinned theme source
+  ansible.builtin.get_url:
+    url: "https://github.com/Fausto-Korpsvart/Gruvbox-GTK-Theme/archive/{{ setup_gruvbox_commit }}.tar.gz"
+    checksum: "sha256:{{ setup_gruvbox_checksum }}"
+    dest: "/var/cache/system-setup/gruvbox-{{ setup_gruvbox_commit }}.tar.gz"
+    mode: '0644'
+
+- name: Extract theme source
+  ansible.builtin.unarchive:
+    src: "/var/cache/system-setup/gruvbox-{{ setup_gruvbox_commit }}.tar.gz"
+    dest: /var/cache/system-setup
+    remote_src: true
+    creates: "{{ setup_theme_source }}/themes/install.sh"
+  when: not ansible_check_mode
+
+- name: Create versioned theme bundle directory
+  ansible.builtin.file:
+    path: "{{ setup_theme_bundle }}"
+    state: directory
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    mode: '0755'
+
+- name: Allow the unprivileged builder to write its generated Sass sources
+  ansible.builtin.file:
+    path: "{{ setup_theme_source }}"
+    state: directory
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    recurse: true
+  when: not ansible_check_mode
+
+- name: Build the pinned upstream theme as the target user
+  become: true
+  become_user: "{{ setup_user }}"
+  ansible.builtin.command:
+    argv:
+      - "{{ setup_theme_source }}/themes/install.sh"
+      - --dest
+      - "{{ setup_theme_bundle }}"
+      - --theme
+      - default
+      - --color
+      - dark
+      - --size
+      - standard
+    chdir: "{{ setup_theme_source }}/themes"
+    creates: "{{ setup_theme_bundle }}/.system-setup-owner"
+
+- name: Verify generated theme files before publishing
+  ansible.builtin.stat:
+    path: "{{ setup_theme_bundle }}/{{ item }}"
+  loop:
+    - Gruvbox-Dark/index.theme
+    - Gruvbox-Dark/gtk-2.0/gtkrc
+    - Gruvbox-Dark/gtk-3.0/gtk.css
+    - Gruvbox-Dark/gtk-4.0/gtk.css
+    - Gruvbox-Dark/gnome-shell/gnome-shell.css
+    - Gruvbox-Dark/cinnamon/cinnamon.css
+    - Gruvbox-Dark/metacity-1/metacity-theme-3.xml
+    - Gruvbox-Dark/xfwm4/themerc
+    - Gruvbox-Dark-hdpi/xfwm4/themerc
+    - Gruvbox-Dark-xhdpi/xfwm4/themerc
+  register: setup_theme_outputs
+  when: not ansible_check_mode
+
+- name: Require nonempty theme output
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.size > 0
+  loop: "{{ setup_theme_outputs.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not ansible_check_mode
+
+- name: Mark verified bundle complete
+  ansible.builtin.copy:
+    dest: "{{ setup_theme_bundle }}/.system-setup-owner"
+    content: "system-setup:gruvbox-bundle:v1\n"
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    mode: '0644'
+
+- name: Publish stable theme link
+  ansible.builtin.file:
+    src: ".system-setup-gruvbox-{{ setup_gruvbox_commit }}/Gruvbox-Dark"
+    dest: "{{ setup_home }}/.themes/Gruvbox-Dark"
+    state: link
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+  when: not ansible_check_mode

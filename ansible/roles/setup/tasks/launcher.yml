@@ -1,0 +1,12 @@
+---
+- name: Install launcher
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.launcher }}"
+
+- name: Install fallback Rofi configuration
+  ansible.builtin.include_tasks: user-file.yml
+  vars:
+    setup_file:
+      src: configs/rofi-config.rasi
+      dest: .config/rofi/config.rasi

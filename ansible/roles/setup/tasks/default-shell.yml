@@ -1,0 +1,24 @@
+---
+- name: Inspect Nix-provided zsh
+  ansible.builtin.stat:
+    path: "{{ setup_home }}/.nix-profile/bin/zsh"
+    follow: true
+  register: setup_zsh
+
+- name: Require deployed Home Manager shell
+  ansible.builtin.assert:
+    that:
+      - setup_zsh.stat.exists
+      - setup_zsh.stat.executable
+    fail_msg: Deploy nix-config first so ~/.nix-profile/bin/zsh exists.
+
+- name: Register Nix zsh as a login shell
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: "{{ setup_home }}/.nix-profile/bin/zsh"
+    state: present
+
+- name: Set explicitly selected login shell
+  ansible.builtin.user:
+    name: "{{ setup_user }}"
+    shell: "{{ setup_home }}/.nix-profile/bin/zsh"

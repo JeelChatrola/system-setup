@@ -1,0 +1,59 @@
+---
+- name: Install terminal helper
+  ansible.builtin.include_tasks: user-file.yml
+  vars:
+    setup_file:
+      src: scripts/open-terminal.sh
+      dest: .local/bin/open-terminal
+      mode: '0755'
+
+- name: Verify terminal selection
+  become: true
+  become_user: "{{ setup_user }}"
+  ansible.builtin.command: "{{ setup_home }}/.local/bin/open-terminal --check"
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Configure explicitly requested GNOME shortcut
+  when: setup_gnome_keybindings | bool
+  block:
+    - name: Install dconf dependencies
+      ansible.builtin.include_tasks: packages.yml
+      vars:
+        setup_package_names: "{{ setup_packages.gnome }}"
+
+    - name: Create user dconf directory
+      ansible.builtin.file:
+        path: "{{ setup_home }}/.config/dconf"
+        state: directory
+        owner: "{{ setup_user }}"
+        group: "{{ setup_gid }}"
+        mode: '0700'
+
+    - name: Read existing GNOME shortcut list
+      become: true
+      become_user: "{{ setup_user }}"
+      community.general.dconf:
+        key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+        state: read
+      register: setup_shortcuts
+
+    - name: Preserve existing shortcuts and add terminal shortcut
+      become: true
+      become_user: "{{ setup_user }}"
+      community.general.dconf:
+        key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+        value: >-
+          {{ ((setup_shortcuts.value | default('[]', true) | regex_replace('^@as ', '') | from_yaml)
+              + ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-terminal/']) | unique | list | string }}
+
+    - name: Configure terminal shortcut values
+      become: true
+      become_user: "{{ setup_user }}"
+      community.general.dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-terminal/{{ item.key }}"
+        value: "{{ item.value | string }}"
+      loop:
+        - {key: name, value: "'Terminal'"}
+        - {key: command, value: "'{{ setup_home }}/.local/bin/open-terminal'"}
+        - {key: binding, value: "'<Primary><Alt>t'"}

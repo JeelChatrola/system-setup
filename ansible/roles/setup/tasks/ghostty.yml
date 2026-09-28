@@ -1,0 +1,38 @@
+---
+- name: Check whether Ghostty is already available
+  ansible.builtin.command: ghostty --version
+  register: setup_ghostty
+  changed_when: false
+  failed_when: setup_ghostty.rc not in [0, 2, 127]
+  check_mode: false
+
+- name: Install Ghostty when absent
+  when: setup_ghostty.rc != 0
+  block:
+    - name: Refresh Ubuntu package metadata
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_facts.distribution == 'Ubuntu'
+
+    - name: Check Ubuntu repository availability
+      ansible.builtin.command: apt-cache show ghostty
+      register: setup_ghostty_candidate
+      changed_when: false
+      failed_when: setup_ghostty_candidate.rc not in [0, 100]
+      check_mode: false
+      when: ansible_facts.distribution == 'Ubuntu'
+
+    - name: Enable supported Ubuntu Ghostty PPA when needed
+      ansible.builtin.apt_repository:
+        repo: ppa:mkasberg/ghostty-ubuntu
+        state: present
+        update_cache: true
+      when:
+        - ansible_facts.distribution == 'Ubuntu'
+        - setup_ghostty_candidate.rc != 0
+
+    - name: Install Ghostty from configured repositories
+      ansible.builtin.include_tasks: packages.yml
+      vars:
+        setup_package_names: "{{ setup_packages.ghostty }}"

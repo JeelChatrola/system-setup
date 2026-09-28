@@ -1,0 +1,20 @@
+---
+- name: Install Flatpak runtime
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.flatpak }}"
+
+- name: Configure system Flathub remote
+  community.general.flatpak_remote:
+    name: flathub
+    flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+    method: system
+    state: present
+
+- name: Install selected Flatpak applications
+  community.general.flatpak:
+    name: "{{ setup_flatpak_apps }}"
+    remote: flathub
+    method: system
+    state: present
+  when: setup_flatpak_apps | length > 0

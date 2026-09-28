@@ -1,0 +1,34 @@
+---
+- name: Install native Arch nvtop package
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: [nvtop]
+  when: setup_backend == 'Archlinux'
+
+- name: Install pinned Debian-family nvtop AppImage
+  when: setup_backend == 'Debian'
+  block:
+    - name: Create user binary directory
+      ansible.builtin.file:
+        path: "{{ setup_home }}/.local/bin"
+        state: directory
+        owner: "{{ setup_user }}"
+        group: "{{ setup_gid }}"
+        mode: '0755'
+
+    - name: Download verified nvtop AppImage
+      ansible.builtin.get_url:
+        url: https://github.com/Syllo/nvtop/releases/download/3.3.2/nvtop-3.3.2-x86_64.AppImage
+        checksum: sha256:a0b06f86cda836fd59aa526baf1f263e1c2d74d58d52e8cdb1619d5dcfde2387
+        dest: "{{ setup_home }}/.local/bin/nvtop-3.3.2-x86_64.AppImage"
+        owner: "{{ setup_user }}"
+        group: "{{ setup_gid }}"
+        mode: '0755'
+
+    - name: Link nvtop executable
+      ansible.builtin.file:
+        src: nvtop-3.3.2-x86_64.AppImage
+        dest: "{{ setup_home }}/.local/bin/nvtop"
+        state: link
+        owner: "{{ setup_user }}"
+        group: "{{ setup_gid }}"

@@ -1,0 +1,75 @@
+---
+- name: Look for an existing Nix installation
+  ansible.builtin.command: nix --version
+  environment:
+    PATH: "{{ setup_home }}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:{{ ansible_facts.env.PATH }}"
+  register: setup_nix_present
+  failed_when: setup_nix_present.rc not in [0, 2, 127]
+  changed_when: false
+  check_mode: false
+
+- name: Install Nix when absent
+  when: setup_nix_present.rc != 0
+  block:
+    - name: Require a systemd host for the multi-user installer
+      ansible.builtin.assert:
+        that: ansible_facts.service_mgr == 'systemd'
+        fail_msg: Nix installation requires a systemd host; use a VM for this integration test.
+
+    - name: Install Nix prerequisites
+      ansible.builtin.include_tasks: packages.yml
+      vars:
+        setup_package_names: "{{ setup_packages.nix }}"
+
+    - name: Create installer cache
+      ansible.builtin.file:
+        path: /var/cache/system-setup
+        state: directory
+        mode: '0755'
+
+    - name: Download checksum-pinned Nix installer
+      ansible.builtin.get_url:
+        url: "https://github.com/DeterminateSystems/nix-installer/releases/download/v{{ setup_nix_version }}/nix-installer-{{ ansible_facts.architecture }}-linux"
+        dest: "/var/cache/system-setup/nix-installer-{{ setup_nix_version }}"
+        checksum: "sha256:{{ setup_nix_checksums[ansible_facts.architecture] }}"
+        mode: '0755'
+
+    - name: Install multi-user Nix
+      ansible.builtin.command:
+        argv: ["/var/cache/system-setup/nix-installer-{{ setup_nix_version }}", install, --no-confirm]
+        creates: /nix/receipt.json
+
+- name: Create user Nix configuration directory
+  ansible.builtin.file:
+    path: "{{ setup_home }}/.config/nix"
+    state: directory
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    mode: '0755'
+
+- name: Inspect user Nix configuration ownership
+  ansible.builtin.stat:
+    path: "{{ setup_home }}/.config/nix/nix.conf"
+    follow: false
+  register: setup_nix_config
+
+- name: Enable Nix CLI and flakes without replacing other features
+  ansible.builtin.blockinfile:
+    path: "{{ setup_home }}/.config/nix/nix.conf"
+    marker: '# {mark} system-setup experimental features'
+    block: 'extra-experimental-features = nix-command flakes'
+    create: true
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    mode: '0644'
+  when: not (setup_nix_config.stat.islnk | default(false))
+
+- name: Verify Nix as the target user
+  become: true
+  become_user: "{{ setup_user }}"
+  ansible.builtin.command: nix flake --help
+  environment:
+    HOME: "{{ setup_home }}"
+    PATH: "{{ setup_home }}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:{{ ansible_facts.env.PATH }}"
+  changed_when: false
+  when: not ansible_check_mode

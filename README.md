@@ -1,131 +1,129 @@
-# System Setup Bootstrapper
+# System Setup
 
-An explicit, rerunnable bootstrapper for supported Ubuntu and Debian hosts. It installs system services and native desktop packages; Nix and Home Manager remain responsible for user packages, fonts, and dotfiles.
+Ansible provisioning for personal Linux machines. Native packages and services belong here; Nix and Home Manager own user packages, fonts, and personal dotfiles.
 
-## Supported Matrix
+The `experiment/ansible` branch adds an Ansible implementation of all twelve existing components. The original Bash entry point remains available during migration; its instructions are in [docs/legacy-bootstrap.md](docs/legacy-bootstrap.md).
 
-| Distribution | Release | Architectures | Notes |
-| --- | --- | --- | --- |
-| Ubuntu | 24.04 (noble) | `x86_64`, `aarch64` | All components except `nvtop` on `aarch64` |
-| Debian | 12 (bookworm) | `x86_64`, `aarch64` | All components except `nvtop` on `aarch64`; Ghostty must exist in configured Debian repositories |
+## Platforms
 
-Other distributions, codenames, and releases fail before apply. `nvtop` uses an upstream x86_64 AppImage and is therefore x86_64-only. `flatpak` converges a Chrome-only managed list and is likewise x86_64-only. Desktop package availability is checked by each component after it refreshes APT metadata; an active GUI session is not required.
+| Platform | Package backend | Scope |
+| --- | --- | --- |
+| Ubuntu 24.04 | APT and signed vendor repositories | System capabilities and optional i3 desktop |
+| Debian 12 / 13 | APT and signed vendor repositories | System capabilities; Ghostty needs a repository that packages it |
+| Arch Linux | pacman, official repositories | System capabilities and optional i3 desktop |
+| Omarchy | Arch backend | Personal system capabilities; Omarchy keeps ownership of its desktop |
 
-## Commands
+The Docker tests run on x86_64. Debian-family tasks also accept aarch64, with architecture-specific repository settings and Nix installer checksums, but ARM64 has not been integration-tested. Chrome requires x86_64; the Debian-family nvtop component uses an x86_64 AppImage. Arch/Omarchy ARM64 is outside this experiment's supported matrix.
 
-Exactly one profile or one component is required:
+On Arch, fully update the machine before provisioning. Use Omarchy's own updater on Omarchy. Ansible installs missing packages against the existing package database and does not refresh that database independently or perform an OS upgrade. No AUR helper is used.
+
+## Install the tooling
+
+Run from the repository root as your normal account. The controller requires Python 3.12 or newer; target machines need Python 3.9 or newer and sudo. With [uv](https://docs.astral.sh/uv/) installed:
 
 ```bash
-./install.sh --profile PROFILE [--add COMPONENT]... [--remove COMPONENT]... [--plan] [--yes] [--add-docker-group]
-./install.sh --component COMPONENT [--plan] [--yes] [--add-docker-group]
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r ansible/requirements.txt
+source .venv/bin/activate
+ansible-galaxy collection install -r ansible/requirements.yml
 ```
 
-Examples:
+The requirements pin Ansible Core 2.20.2 and the collections used by the playbook and Docker test connection. The supplied inventory provisions localhost using its system Python.
+
+## Run
+
+Resolve the selection and validate the host first:
 
 ```bash
-./install.sh --profile workstation --plan
-./install.sh --profile workstation --add nvidia --add tailscale --yes
-./install.sh --profile personal --remove appearance --add default-shell
-./install.sh --component tailscale --yes
-./install.sh --component docker --add-docker-group --yes
+ansible-playbook -i ansible/inventory.ini ansible/site.yml \
+  -K -e setup_user="$USER" -e @ansible/hosts/omarchy.yml --tags plan
 ```
 
-`--plan` parses `/etc/os-release` as data, validates the platform, and resolves the final component list without writes, `sudo`, Docker daemon queries, package commands, downloads, or network access. Checks that require Docker, Rofi, a terminal, or package metadata are explicitly deferred to apply. `--yes` answers supported component confirmations; it does not imply Docker group membership. Additions and removals are valid only with profiles.
+Apply by removing `--tags plan`:
 
-Run apply as the intended non-root user. Direct root execution is refused because user-owned files, login-shell changes, and optional group membership must target that user consistently; the component scripts invoke `sudo` for system changes. Help and planning remain available as root. `SYSTEM_SETUP_OS_RELEASE`, `SYSTEM_SETUP_ARCH`, and systemd overrides are ignored unless the internal `SYSTEM_SETUP_TEST_MODE=1` test contract is explicitly enabled.
+```bash
+ansible-playbook -i ansible/inventory.ini ansible/site.yml \
+  -K -e setup_user="$USER" -e @ansible/hosts/omarchy.yml
+```
+
+`-K` asks for the sudo password. Omit it when passwordless sudo is already configured. Supply `setup_user` explicitly, especially when provisioning another machine. The home directory is looked up from that machine's account database.
+
+For the existing Ubuntu workstation, use `ansible/hosts/workstation.yml`; it includes NVIDIA Container Toolkit and Tailscale. To install only selected components:
+
+```bash
+ansible-playbook -i ansible/inventory.ini ansible/site.yml \
+  -K -e setup_user="$USER" \
+  -e '{"setup_components":["docker","nvidia","tailscale"]}'
+```
+
+To customize a profile:
+
+```bash
+ansible-playbook -i ansible/inventory.ini ansible/site.yml \
+  -K -e setup_user="$USER" -e setup_profile=workstation \
+  -e '{"setup_add":["tailscale"],"setup_remove":["appearance","flatpak"]}'
+```
+
+Components run in dependency order. Removals win. An explicit `setup_components` list cannot be combined with a profile or additions/removals.
+
+`--tags plan` gathers facts and validates the selection without running component tasks. It does not check remote package availability. Ansible may need sudo and writes its normal temporary module files; this differs from the legacy offline `--plan` contract. `--check --diff` is useful after the first apply. On a fresh host, it cannot simulate packages or commands supplied by repositories that have not yet been added, and may fail on those missing prerequisites.
 
 ## Profiles
 
-Components always run in canonical order, regardless of option order. Duplicate additions are ignored and removals win.
-
-| Profile | Exact expansion |
+| Profile | Components |
 | --- | --- |
-| `base` | `nix` |
-| `personal` | `nix ghostty launcher appearance flatpak` |
-| `workstation` | `nix docker ghostty launcher i3 keybindings appearance flatpak` |
-| `server` | `nix docker` |
+| `base` | nix |
+| `personal` | nix, ghostty, launcher, appearance, flatpak |
+| `workstation` | nix, docker, ghostty, launcher, i3, keybindings, appearance, flatpak |
+| `server` | nix, docker |
+| `omarchy` | nix |
 
-## Components
+The example Omarchy host file adds Tailscale. Add Docker or NVIDIA explicitly if you want this repository to manage them. Selecting `omarchy`, or detecting `~/.local/share/omarchy` for the target user, blocks the desktop and login-shell components before package changes. Hyprland, themes, launcher settings, and Omarchy updates remain under Omarchy's control.
 
-| Component | Main side effects and ownership |
+## Component behavior
+
+| Component | Ansible behavior |
 | --- | --- |
-| `nix` | Installs pinned Determinate Nix when absent and ensures `nix-command`/flakes are enabled. Does not add channels or install Home Manager. |
-| `docker` | Neutralizes stale installer-owned `docker.list`/`docker.sources` files before the first APT update, then converges Docker's canonical official repository, Engine packages, Compose plugin, and systemd service. It verifies the daemon through `sudo docker info` and does not change group membership by default. |
-| `nvidia` | Installs NVIDIA Container Toolkit when needed, always converges the Docker runtime, and verifies Docker through sudo. Requires selected `docker` or a working existing privileged Docker installation. |
-| `tailscale` | Installs and enables `tailscaled`; enables IPv4/IPv6 forwarding for exit-node use. Authentication and route advertisement remain manual. |
-| `ghostty` | Installs Ghostty from APT. Ubuntu may use the validated noble PPA fallback; Debian never receives an Ubuntu PPA. |
-| `launcher` | Owns the Rofi package and the fallback `~/.config/rofi/config.rasi`. When that path is managed elsewhere (symlink), the installer leaves it untouched; a differing real file is backed up before replacement. |
-| `i3` | Installs i3, Polybar, wallpaper tools, and managed i3/Polybar files. It does not own Rofi and standalone apply requires Rofi to exist before any mutation. |
-| `keybindings` | Installs the terminal helper and configures GNOME `Ctrl+Alt+T` when applicable. |
-| `appearance` | Installs Papirus icons and builds `Gruvbox-Dark`, `-hdpi`, and `-xhdpi` inside one marked, versioned bundle. Only `~/.themes/Gruvbox-Dark` is published; arbitrary or broken links and unmanaged files/directories at that path are left byte-identical and require manual removal. It does not install fonts. |
-| `flatpak` | Installs the Flatpak runtime, ensures the Flathub remote (system scope), and converges `configs/flatpak-apps.txt` (Chrome only; x86_64-only). Cursor/VSCode stay manual (not on Flathub). |
-| `default-shell` | Requires zsh from the separately deployed nix-config at `~/.nix-profile/bin/zsh`, registers it in `/etc/shells`, and changes the login shell after confirmation or `--yes`. It never mutates the Nix profile. |
-| `nvtop` | Installs and verifies the pinned upstream x86_64 AppImage in `~/.local/bin`. |
+| `nix` | Installs checksum-pinned Determinate Nix when absent; adds CLI/flake features to a real user config file; verifies Nix as the target user. A new installation requires systemd. |
+| `docker` | Installs Engine, Compose, and Buildx; starts/enables the service and verifies the daemon. Group membership requires `setup_docker_group: true`. |
+| `nvidia` | Installs Container Toolkit and merges the NVIDIA runtime into `daemon.json`, preserving unrelated settings. Restarts Docker only when configuration changes. Requires selected or existing Docker. GPU drivers are separate. |
+| `tailscale` | Installs/enables the daemon and configures forwarding by default. Set `setup_tailscale_forwarding: false` to leave forwarding unmanaged. Authentication and route advertisement are manual. |
+| `ghostty` | Uses configured native repositories. Ubuntu 24.04 can use the existing PPA fallback; Debian never receives that PPA. |
+| `launcher` | Installs Rofi and its fallback configuration. |
+| `i3` | Installs i3/Polybar and existing configuration assets. Uses Feh for wallpaper loading on both backends. Requires a terminal and Rofi. |
+| `keybindings` | Installs/verifies the terminal helper. GNOME dconf changes require `setup_gnome_keybindings: true`; existing shortcut entries are retained. |
+| `appearance` | Installs Papirus and builds checksum-pinned Gruvbox assets as the user. Validates generated files before publishing a versioned theme link. |
+| `flatpak` | Installs the runtime, system Flathub remote, and `setup_flatpak_apps` (Chrome by default). |
+| `default-shell` | Registers and selects the existing `~/.nix-profile/bin/zsh`; deploy Home Manager first. Selecting this component authorizes the shell change. |
+| `nvtop` | Uses Arch's native package or the existing pinned Debian-family AppImage. |
 
-Nix owns user fonts. Home Manager configuration and dotfiles are handled separately.
+Ansible backs up differing real desktop configuration files. Symlinked destination files and immediate parent directories are left to their existing manager. The appearance migration refuses an existing theme link pointing outside its versioned bundle: move the old `~/.themes/Gruvbox-Dark` path aside before selecting that component.
 
-## Docker Group Warning
+APT signing keys retain the legacy pinned fingerprints. The matching legacy `.list` files are backed up and replaced by deb822 `.sources` files. Package installs use `state: present`; package upgrades belong to the host's normal update process.
 
-Rootful Docker group membership is effectively root access. The installer never adds a user automatically. Pass `--add-docker-group` only when that access is intended; log out and back in afterward. This flag has no effect unless the `docker` component is selected.
-
-## Terminal Shortcuts
-
-The installed `open-terminal` helper chooses `$TERMINAL`, `ghostty`, `x-terminal-emulator`, `i3-sensible-terminal`, then `gnome-terminal`. It rejects itself as `$TERMINAL` to prevent recursion. Standalone `i3` requires both existing Rofi and a usable terminal before writes; standalone `keybindings` requires a terminal. The workstation profile installs launcher and Ghostty first.
-
-Key i3 shortcuts:
-
-| Action | Shortcut |
-| --- | --- |
-| Open terminal | `Win + Enter` |
-| Open launcher | `Win + d` |
-| Close window | `Win + Shift + q` |
-| Help | `Win + Shift + ?` |
-| Restart i3 | `Win + Shift + r` |
-
-## Reruns
-
-Component scripts verify existing installations and continue to repair required configuration instead of treating an existing executable as completion. Managed files are replaced atomically where practical. Package managers and service enablement are convergent, though APT metadata refreshes and remote repository checks still occur on apply. Existing i3 configuration is backed up before replacement when that component runs.
-
-No universal rollback is attempted. Review `--plan` and the component side effects before apply.
-
-## Current Workstation Migration
-
-Migration of the current workstation is a mandatory clean break from the previous installer. Use the system profile with both host capabilities added explicitly:
+## Tests
 
 ```bash
-./install.sh --profile workstation --add nvidia --add tailscale --plan
-./install.sh --profile workstation --add nvidia --add tailscale --yes
+yamllint ansible tests/ansible .github/workflows/ansible.yml
+ansible-lint --offline ansible/site.yml tests/ansible/*.yml
+ansible-playbook -i ansible/inventory.ini ansible/site.yml --syntax-check
+bash tests/ansible/run.sh
+TEST_DESKTOP=1 bash tests/ansible/run.sh ubuntu:24.04 archlinux:base
 ```
 
-Do not apply the bare workstation profile on that host: omitting `--add nvidia --add tailscale` would stop converging its current GPU-container and Tailscale capabilities. The workstation preset intentionally remains `nix docker ghostty launcher i3 keybindings appearance`; hardware- and host-specific services stay explicit additions rather than silently becoming defaults for every workstation.
+The Docker runner builds disposable Ubuntu, Debian, and Arch containers, installs real packages, checks configuration preservation, reapplies and requires `changed=0`, then exercises check mode. The Arch test also simulates Omarchy's ownership marker and checks that desktop components are rejected. `TEST_DESKTOP=1` adds headless i3 configuration checks and a real Gruvbox build with a second-run idempotency check. CI runs this expanded suite on all four images.
 
-## Fresh Machine Sequence
+Containers use `setup_manage_services: false`. They test package/configuration behavior, not systemd startup, Docker daemon operation, Nix installation, GPU access, a live desktop session, or a complete Omarchy installation. Those need a booted VM or real machine. Flatpak application downloads, the Ghostty PPA fallback, Nix, and login-shell changes require additional integration coverage before replacing the legacy installer on the current workstation.
 
-1. Install Ubuntu 24.04 or Debian 12 and ensure the user has `sudo` access and network connectivity.
-2. Clone this repository using the machine's chosen authentication setup.
-3. Run `./install.sh --profile workstation --plan` or the appropriate server/personal profile. For the current workstation, use the mandatory migration command above instead.
-4. Apply with `./install.sh --profile workstation --yes`. For the current workstation, retain both explicit additions shown above.
-5. Reboot or log out, then select i3 if installed.
-6. Deploy Home Manager and dotfiles separately.
-7. Add explicit host extras as needed. NVIDIA and Tailscale are mandatory explicit additions on the current workstation.
+## Layout
 
-For a Tailscale exit node, authenticate and advertise it after installation:
-
-```bash
-sudo tailscale up
-sudo tailscale set --advertise-exit-node
+```text
+ansible/site.yml                  Playbook entry point
+ansible/hosts/                    Example host selections
+ansible/roles/setup/defaults/     Profiles and configurable settings
+ansible/roles/setup/vars/         Distro package mappings
+ansible/roles/setup/tasks/        Native Ansible component tasks
+tests/ansible/                   Docker fixtures, assertions, and runner
 ```
 
-Approve the machine in the Tailscale admin console. The installer does not authenticate Tailscale, advertise routes, or broaden firewall forwarding policy.
-
-## Validation
-
-Run local validation before review:
-
-```bash
-bash tests/run.sh
-git ls-files -z '*.sh' | while IFS= read -r -d '' script; do bash -n "$script"; done
-git ls-files -z '*.sh' | xargs -0 shellcheck -x -P SCRIPTDIR
-git diff --check
-if git grep -nEi 'alacri[t]ty|ki[t]ty' --; then exit 1; fi
-```
+The Ansible path does not invoke the legacy provisioning scripts. The remaining command tasks handle external installers, build steps, read-only checks, and live sysctl settings.

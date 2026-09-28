@@ -1,0 +1,4 @@
+---
+setup_profile: workstation
+setup_add: [nvidia, tailscale]
+setup_gnome_keybindings: true

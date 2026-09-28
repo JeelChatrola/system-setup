@@ -1,0 +1,61 @@
+---
+- name: Verify standalone i3 launcher dependency
+  ansible.builtin.command: rofi -v
+  changed_when: false
+  check_mode: false
+  when: "'launcher' not in setup_selected"
+
+- name: Install i3 desktop packages
+  ansible.builtin.include_tasks: packages.yml
+  vars:
+    setup_package_names: "{{ setup_packages.i3 }}"
+
+- name: Install i3 configuration using the cross-distro wallpaper tool
+  ansible.builtin.include_tasks: user-file.yml
+  vars:
+    setup_file:
+      dest: .config/i3/config
+      content: >-
+        {{ lookup('file', role_path + '/../../../configs/i3-config', rstrip=false)
+           | replace('exec --no-startup-id nitrogen --restore', 'exec --no-startup-id feh --bg-fill ~/Pictures/bg.jpg') }}
+
+- name: Install i3 helpers and Polybar configuration
+  ansible.builtin.include_tasks: user-file.yml
+  loop:
+    - {src: configs/i3-help.sh, dest: .local/bin/i3-help, mode: '0755'}
+    - {src: configs/polybar-launch.sh, dest: .config/polybar/launch.sh, mode: '0755'}
+    - {src: configs/polybar-config.ini, dest: .config/polybar/config.ini}
+    - {src: scripts/open-terminal.sh, dest: .local/bin/open-terminal, mode: '0755'}
+  loop_control:
+    loop_var: setup_file
+
+- name: Verify terminal helper can find a terminal
+  become: true
+  become_user: "{{ setup_user }}"
+  ansible.builtin.command: "{{ setup_home }}/.local/bin/open-terminal --check"
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Create wallpaper directory
+  ansible.builtin.file:
+    path: "{{ setup_home }}/Pictures"
+    state: directory
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    mode: '0755'
+
+- name: Inspect existing wallpaper
+  ansible.builtin.stat:
+    path: "{{ setup_home }}/Pictures/bg.jpg"
+    follow: false
+  register: setup_wallpaper
+
+- name: Install initial checksum-pinned wallpaper
+  ansible.builtin.get_url:
+    url: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=1920&auto=format&fit=crop'
+    checksum: sha256:77cd9dc55b0fe199cab2810f89e6d058c2d6c44eaf0ef93bb5dd8bb74f42a157
+    dest: "{{ setup_home }}/Pictures/bg.jpg"
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    mode: '0644'
+  when: not setup_wallpaper.stat.exists

@@ -1,0 +1,35 @@
+---
+# Symlinked files/directories may be owned by Home Manager. Never follow them.
+- name: Inspect destination directory
+  ansible.builtin.stat:
+    path: "{{ setup_home }}/{{ setup_file.dest | dirname }}"
+    follow: false
+  register: setup_file_parent
+
+- name: Install file in user-owned directory
+  when: not (setup_file_parent.stat.islnk | default(false))
+  block:
+    - name: Ensure destination directory exists
+      ansible.builtin.file:
+        path: "{{ setup_home }}/{{ setup_file.dest | dirname }}"
+        state: directory
+        owner: "{{ setup_user }}"
+        group: "{{ setup_gid }}"
+        mode: '0755'
+
+    - name: Inspect destination file
+      ansible.builtin.stat:
+        path: "{{ setup_home }}/{{ setup_file.dest }}"
+        follow: false
+      register: setup_file_state
+
+    - name: Copy managed file and back up differing real files
+      ansible.builtin.copy:
+        src: "{{ (role_path + '/../../../' + setup_file.src) if setup_file.content is not defined else omit }}"
+        content: "{{ setup_file.content | default(omit) }}"
+        dest: "{{ setup_home }}/{{ setup_file.dest }}"
+        owner: "{{ setup_user }}"
+        group: "{{ setup_gid }}"
+        mode: "{{ setup_file.mode | default('0644') }}"
+        backup: true
+      when: not (setup_file_state.stat.islnk | default(false))

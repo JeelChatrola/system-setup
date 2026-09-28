@@ -1,0 +1,33 @@
+---
+- name: Create fixtures for ownership and configuration preservation
+  hosts: all
+  tasks:
+    - name: Create configuration directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ 'tester' if item.startswith('/home/tester/') else 'root' }}"
+        group: "{{ 'tester' if item.startswith('/home/tester/') else 'root' }}"
+      loop:
+        - /etc/docker
+        - /home/tester/.config
+        - /home/tester/.config/rofi
+
+    - name: Seed unrelated Docker configuration
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        content: '{"log-driver": "json-file", "runtimes": {"custom": {"path": "/usr/bin/custom-runtime"}}}'
+        mode: '0644'
+
+    - name: Seed externally managed launcher configuration
+      ansible.builtin.copy:
+        dest: /home/tester/rofi-managed.rasi
+        content: '/* externally managed fixture */'
+        mode: '0644'
+
+    - name: Link external launcher configuration
+      ansible.builtin.file:
+        src: /home/tester/rofi-managed.rasi
+        dest: /home/tester/.config/rofi/config.rasi
+        state: link

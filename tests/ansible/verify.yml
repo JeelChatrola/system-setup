@@ -1,0 +1,51 @@
+---
+- name: Verify installed capabilities without pretending to run a systemd host
+  hosts: all
+  tasks:
+    - name: Exercise installed command-line tools
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - docker --version
+        - docker compose version
+        - docker buildx version
+        - nvidia-ctk --version
+        - tailscale version
+        - rofi -v
+      changed_when: false
+
+    - name: Read Docker runtime configuration
+      ansible.builtin.slurp:
+        src: /etc/docker/daemon.json
+      register: docker_config
+
+    - name: Verify runtime merge preserves unrelated configuration
+      ansible.builtin.assert:
+        that:
+          - config['log-driver'] == 'json-file'
+          - config.runtimes.custom.path == '/usr/bin/custom-runtime'
+          - config.runtimes.nvidia.path == 'nvidia-container-runtime'
+      vars:
+        config: "{{ docker_config.content | b64decode | from_json }}"
+
+    - name: Inspect externally managed Rofi symlink
+      ansible.builtin.stat:
+        path: /home/tester/.config/rofi/config.rasi
+        follow: false
+      register: rofi_link
+
+    - name: Read external Rofi configuration
+      ansible.builtin.slurp:
+        src: /home/tester/rofi-managed.rasi
+      register: rofi_config
+
+    - name: Read user group memberships
+      ansible.builtin.command: id -nG tester
+      changed_when: false
+      register: user_groups
+
+    - name: Verify ownership boundaries
+      ansible.builtin.assert:
+        that:
+          - rofi_link.stat.islnk
+          - rofi_config.content | b64decode == '/* externally managed fixture */'
+          - "'docker' not in user_groups.stdout.split()"

@@ -1,0 +1,10 @@
+---
+- name: Simulate Omarchy ownership markers on an Arch test container
+  hosts: all
+  tasks:
+    - name: Create Omarchy marker
+      ansible.builtin.file:
+        path: /home/tester/.local/share/omarchy
+        state: directory
+        owner: tester
+        mode: '0755'
