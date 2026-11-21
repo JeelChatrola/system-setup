@@ -101,6 +101,20 @@ Ansible backs up differing real desktop configuration files. Symlinked destinati
 
 APT signing keys retain the legacy pinned fingerprints. The matching legacy `.list` files are backed up and replaced by deb822 `.sources` files. Package installs use `state: present`; package upgrades belong to the host's normal update process.
 
+## Albert and keyboard shortcuts
+
+Albert is an optional desktop component. Run the following as the desktop user.
+
+```bash
+ansible-playbook -i ansible/inventory.ini ansible/site.yml -e setup_user="$USER" -e '{"setup_components":["albert"]}'
+```
+
+The installer uses an existing Albert 35 on PATH or builds a pinned package with Nix in the user's state directory. Install the `nix` component first if you need the fallback. The Nix install also provides Screenshot on desktops without a screenshot application on PATH.
+
+Start Albert from the applications menu or log in again. **Shift+F2** opens a new configuration. An existing Albert hotkey takes precedence. Type `keys reopen tab` or `keys ghostty split right` to search keyboard bindings. Enter copies the selected keys. **Keyboard Shortcuts** in the applications list opens the same search. Regular queries go to Albert's application, calculator and web search plugins.
+
+The plugin reads available Ghostty, i3, Bash Readline and tmux bindings. Reference entries are labeled as defaults. Add local bindings as tab-separated application, description and keys in `~/.config/i3/shortcuts.tsv`. For a custom i3 configuration, start Albert at login with `exec --no-startup-id albert`.
+
 ## Tests
 
 ```bash

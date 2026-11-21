@@ -107,3 +107,6 @@ exec --no-startup-id ~/.local/bin/i3-wallpaper
 # Launch Polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
+
+# Start the optional Albert launcher when configured for this account.
+exec --no-startup-id test -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/albert.desktop" && gio launch "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/albert.desktop"

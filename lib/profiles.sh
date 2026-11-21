@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-COMPONENT_ORDER=(nix docker nvidia tailscale ghostty launcher i3 keybindings appearance flatpak default-shell nvtop)
+COMPONENT_ORDER=(nix docker nvidia tailscale ghostty launcher albert i3 keybindings appearance flatpak default-shell nvtop)
 
 is_component() {
     local candidate="$1" component

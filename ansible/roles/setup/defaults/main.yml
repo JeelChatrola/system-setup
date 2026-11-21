@@ -23,14 +23,15 @@ setup_component_order:
   - tailscale
   - ghostty
   - launcher
+  - albert
   - i3
   - keybindings
   - appearance
   - flatpak
   - default-shell
   - nvtop
-setup_desktop_components: [ghostty, launcher, i3, keybindings, appearance, flatpak, default-shell]
-setup_user_components: [nix, launcher, i3, keybindings, appearance, default-shell, nvtop]
+setup_desktop_components: [ghostty, launcher, albert, i3, keybindings, appearance, flatpak, default-shell]
+setup_user_components: [nix, launcher, albert, i3, keybindings, appearance, default-shell, nvtop]
 
 setup_nix_version: 3.21.5
 setup_nix_checksums:
