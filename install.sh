@@ -110,6 +110,7 @@ declare -A COMPONENT_SCRIPTS=(
     [nvidia]="debian/install-nvidia-toolkit.sh"
     [tailscale]="debian/install-tailscale.sh"
     [ghostty]="debian/install-ghostty.sh"
+    [albert]="configs/albert/install.sh"
     [launcher]="debian/install-launcher.sh"
     [i3]="debian/install-i3.sh"
     [keybindings]="debian/setup-keybindings.sh"

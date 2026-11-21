@@ -18,6 +18,7 @@ jobs:
         run: |
           bash tests/run.sh
           bash tests/review-regressions.sh
+          python3 -B tests/test-albert-shortcuts.py
 
       - name: Check Bash syntax
         run: |
