@@ -55,7 +55,7 @@ Components always run in canonical order, regardless of option order. Duplicate 
 | `tailscale` | Installs and enables `tailscaled`; enables IPv4/IPv6 forwarding for exit-node use. Authentication and route advertisement remain manual. |
 | `ghostty` | Installs Ghostty from APT. Ubuntu may use the validated noble PPA fallback; Debian never receives an Ubuntu PPA. |
 | `launcher` | Owns the Rofi package and the fallback `~/.config/rofi/config.rasi`. When that path is managed elsewhere (symlink), the installer leaves it untouched; a differing real file is backed up before replacement. |
-| `i3` | Installs i3, Polybar, wallpaper tools, and managed i3/Polybar files. It does not own Rofi and standalone apply requires Rofi to exist before any mutation. |
+| `i3` | Installs i3, Polybar, wallpaper tools, and managed i3/Polybar files. Uses a saved Nitrogen layout, then `~/Pictures/bg.jpg`, then the installed distro wallpaper when available. It does not own Rofi and standalone apply requires Rofi to exist before any mutation. |
 | `keybindings` | Installs the terminal helper and configures GNOME `Ctrl+Alt+T` when applicable. |
 | `appearance` | Installs Papirus icons and builds `Gruvbox-Dark`, `-hdpi`, and `-xhdpi` inside one marked, versioned bundle. Only `~/.themes/Gruvbox-Dark` is published; arbitrary or broken links and unmanaged files/directories at that path are left byte-identical and require manual removal. It does not install fonts. |
 | `flatpak` | Installs the Flatpak runtime, ensures the Flathub remote (system scope), and converges `configs/flatpak-apps.txt` (Chrome only; x86_64-only). Cursor/VSCode stay manual (not on Flathub). |

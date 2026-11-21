@@ -13,10 +13,6 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck source=../lib/supply-chain.sh
-source "$REPO_ROOT/lib/supply-chain.sh"
-WALLPAPER_URL='https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=1920&auto=format&fit=crop'
-WALLPAPER_SHA256=77cd9dc55b0fe199cab2810f89e6d058c2d6c44eaf0ef93bb5dd8bb74f42a157
 if ! command -v rofi >/dev/null 2>&1; then
     echo "[ERROR] i3 requires Rofi for its configured launcher shortcut. Apply the launcher component first." >&2
     exit 1
@@ -28,7 +24,7 @@ fi
 
 echo "[*] Installing i3 and utilities..."
 sudo apt update
-sudo apt install -y i3 i3-wm i3status i3lock dmenu suckless-tools feh picom nitrogen polybar zenity fonts-font-awesome curl ca-certificates
+sudo apt install -y i3 i3-wm i3status i3lock dmenu suckless-tools feh picom polybar zenity fonts-font-awesome
 
 echo "[*] Configuring i3 defaults..."
 mkdir -p "$HOME/.config/i3"
@@ -56,13 +52,8 @@ fi
 mkdir -p "$(dirname "$OPEN_TERMINAL_DESTINATION")"
 install_atomic "$OPEN_TERMINAL_SOURCE" "$OPEN_TERMINAL_DESTINATION" 0755
 
-# Download a nice default wallpaper
-if [ ! -f "$HOME/Pictures/bg.jpg" ]; then
-    echo "[*] Downloading default wallpaper..."
-    download_verified_file "$WALLPAPER_URL" "$WALLPAPER_SHA256" "$HOME/Pictures/bg.jpg"
-fi
-
 # Install Help Script
+install_atomic "$CONFIG_DIR/i3-wallpaper.sh" "$HOME/.local/bin/i3-wallpaper" 0755
 install_atomic "$CONFIG_DIR/i3-help.sh" "$HOME/.local/bin/i3-help" 0755
 
 # Install Polybar Configs
@@ -85,10 +76,8 @@ fi
 
 echo "[OK] i3 Window Manager installed successfully!"
 echo "   - Polybar (Top bar)"
-echo "   - Nitrogen (Wallpaper)"
+echo "   - Optional local wallpaper"
 echo "   - Rofi integration (installed by the launcher component)"
 echo "   - Help Shortcut (Win+Shift+?)"
 echo ""
-echo "[TIP] You must set the wallpaper once manually:"
-echo "      Run: nitrogen --set-zoom-fill --save ~/Pictures/bg.jpg"
-echo ""
+echo "[TIP] To use your own wallpaper, place it at ~/Pictures/bg.jpg."

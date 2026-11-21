@@ -6,13 +6,19 @@ zenity --info --title="i3 Cheat Sheet" --text="
 <b>Win + d</b>          Open App Launcher (Rofi)
 <b>Win + Shift + q</b>  Close Window
 <b>Win + f</b>          Full Screen Toggle
-<b>Win + Shift + ?</b>  Show this help
+<b>Win + ?</b>  Show this help
 
 <b>Navigation:</b>
 <b>Win + Arrows</b>     Move Focus
 <b>Win + Shift + Arrows</b> Move Window
 <b>Win + 1-9</b>        Switch Workspace
 <b>Win + Shift + 1-9</b> Move to Workspace
+
+<b>Find shortcuts in an app</b>
+<b>Ghostty</b>   Ctrl + Shift + P opens its command palette
+<b>GNOME apps</b>   Try Ctrl + ? or the Keyboard Shortcuts menu
+<b>Chrome</b>   F1 opens Chrome Help
+<b>GNOME desktop</b>   Settings → Keyboard → View and Customize Shortcuts
 
 <b>System:</b>
 <b>Win + Shift + r</b>  Restart i3

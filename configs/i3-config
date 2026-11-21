@@ -101,9 +101,9 @@ bindsym $mod+r mode "resize"
 
 # AUTOSTART
 exec --no-startup-id picom -b
-exec --no-startup-id nm-applet
+exec --no-startup-id command -v nm-applet >/dev/null && nm-applet
 # Set wallpaper
-exec --no-startup-id nitrogen --restore
+exec --no-startup-id ~/.local/bin/i3-wallpaper
 # Launch Polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
