@@ -1,0 +1,22 @@
+---
+- name: Stage the Albert installer and shortcut plugin
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../configs/albert/"
+    dest: "{{ setup_home }}/.local/share/system-setup/albert-installer/"
+    owner: "{{ setup_user }}"
+    group: "{{ setup_gid }}"
+    directory_mode: '0755'
+    mode: '0644'
+
+- name: Install Albert and configure the user's plugins
+  become: true
+  become_user: "{{ setup_user }}"
+  ansible.builtin.command:
+    argv:
+      - /bin/bash
+      - "{{ setup_home }}/.local/share/system-setup/albert-installer/install.sh"
+  environment:
+    HOME: "{{ setup_home }}"
+  register: setup_albert_install
+  changed_when: "'Updated ' in setup_albert_install.stdout"
+  when: not ansible_check_mode
