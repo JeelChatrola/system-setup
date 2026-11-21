@@ -1,5 +1,5 @@
 ---
-- name: Provide a terminal and preserve an existing wallpaper for headless tests
+- name: Provide desktop dependencies and a GNOME shortcut for headless tests
   hosts: all
   tasks:
     - name: Install a terminal for shortcut dependency checks
@@ -13,17 +13,3 @@
       community.general.dconf:
         key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
         value: "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-existing/']"
-
-    - name: Create user Pictures directory
-      ansible.builtin.file:
-        path: /home/tester/Pictures
-        state: directory
-        owner: tester
-        mode: '0755'
-
-    - name: Seed wallpaper to verify preservation
-      ansible.builtin.copy:
-        dest: /home/tester/Pictures/bg.jpg
-        content: user wallpaper fixture
-        owner: tester
-        mode: '0644'

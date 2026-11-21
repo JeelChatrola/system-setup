@@ -90,7 +90,7 @@ The example Omarchy host file adds Tailscale. Add Docker or NVIDIA explicitly if
 | `tailscale` | Installs/enables the daemon and configures forwarding by default. Set `setup_tailscale_forwarding: false` to leave forwarding unmanaged. Authentication and route advertisement are manual. |
 | `ghostty` | Uses configured native repositories. Ubuntu 24.04 can use the existing PPA fallback; Debian never receives that PPA. |
 | `launcher` | Installs Rofi and its fallback configuration. |
-| `i3` | Installs i3/Polybar and existing configuration assets. Uses Feh for wallpaper loading on both backends. Requires a terminal and Rofi. |
+| `i3` | Installs i3/Polybar and existing configuration assets. Restores a saved Nitrogen layout or uses Feh for a local user or distro wallpaper when available. Requires a terminal and Rofi. |
 | `keybindings` | Installs/verifies the terminal helper. GNOME dconf changes require `setup_gnome_keybindings: true`; existing shortcut entries are retained. |
 | `appearance` | Installs Papirus and builds checksum-pinned Gruvbox assets as the user. Validates generated files before publishing a versioned theme link. |
 | `flatpak` | Installs the runtime, system Flathub remote, and `setup_flatpak_apps` (Chrome by default). |

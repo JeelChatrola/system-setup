@@ -40,9 +40,11 @@ for image in "${targets[@]}"; do
         ansible-playbook "${options[@]}" "$ROOT/tests/ansible/desktop-fixtures.yml"
         desktop='{"setup_components":["launcher","i3","keybindings","appearance"],"setup_gnome_keybindings":true}'
         ansible-playbook "${options[@]}" -e "$desktop" "$ROOT/ansible/site.yml"
-        ansible-playbook "${options[@]}" "$ROOT/tests/ansible/desktop-verify.yml"
+        # The first install starts without a wallpaper. A later user choice survives reapply.
+        docker exec -u tester "$container" sh -ec 'test ! -e /home/tester/Pictures/bg.jpg && printf %s "user wallpaper fixture" > /home/tester/Pictures/bg.jpg'
         ansible-playbook "${options[@]}" -e "$desktop" "$ROOT/ansible/site.yml" | tee "$tmp/desktop-rerun.log"
         grep -Eq 'changed=0[[:space:]]+unreachable=0[[:space:]]+failed=0' "$tmp/desktop-rerun.log"
+        ansible-playbook "${options[@]}" "$ROOT/tests/ansible/desktop-verify.yml"
     fi
 
     if [[ "$image" == archlinux:* ]]; then
